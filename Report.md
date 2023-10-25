@@ -20,10 +20,12 @@ We plan on communicating through Slack.
 - Merge Sort (MPI + CUDA)
 
 Merge Sort Pseudo Code:
+
+```
 // merge helper function takes in an array along with left, middle, and right indices
 merge(array, left, mid, right):
 	// copying from the original array to two new temporary subarrays
-  left_array = array[left to mid]
+  	left_array = array[left to mid]
 	right_array = array[mid + 1 to right]	
 
 	left_ptr = 0
@@ -59,6 +61,7 @@ merge_sort(array, left, right):
 	merge_sort(array, left, mid)
 	merge_sort(array, mid + 1, right)
 	merge(array, begin, mid, end)
+```
 
 References: 
-https://www.geeksforgeeks.org/merge-sort/
+- https://www.geeksforgeeks.org/merge-sort/
