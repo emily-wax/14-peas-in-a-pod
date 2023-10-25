@@ -1,10 +1,10 @@
 # CSCE 435 Group project
 
 ## 1. Group members:
-1. First
-2. Second
-3. Third
-4. Fourth
+1. Roee Belkin
+2. Harini Kumar
+3. Ansley Thompson
+4. Emily Wax
 
 ---
 
