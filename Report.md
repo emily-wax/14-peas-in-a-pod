@@ -22,7 +22,47 @@ We plan on communicating through Slack.
 - Quick Sort (MPI + CUDA)
 - Merge Sort (MPI + CUDA)
 
-Merge Sort Pseudo Code:
+**Bubble Sort Pseudo Code:**
+
+Bubble sort in parellel uses a slight variation known as Odd-even or Brick sort.
+This odd even variation spreads the data access out slightly so that there can be parellel computation. alternating between 
+odd and even ensures that two threads can never be attempting to read/write the same index in the array at the same time. 
+
+```
+odd even sort Pseudo Code:
+
+for i from 1 to n-1 with step 2:
+    if arr[i] > arr[i + 1]:
+	swap arr[i] and arr[i + 1]
+	sorted = false
+
+
+for i from 2 to n-2 with step 2:
+    if arr[i] > arr[i + 1]:
+	swap arr[i] and arr[i + 1]
+	sorted = false
+
+ 
+
+1. Initialize MPI and get process rank and size.
+2. Determine the total size of the input
+3. Calculate the size of each data chunk for each process (chunk_size = ARRAY_SIZE / num_processes).
+4. Allocate memory for the local data on each process.
+5. If rank == 0:
+   a. Initialize the entire array on the root process.
+   b. Scatter the array to all processes using MPI_Scatter.
+6. Perform the following steps in parallel on each process using CUDA:
+   a. Load the local data chunk into GPU memory.
+   b. have each thread perform odd-even bubble sort on its set of data
+   c. Synchronize the GPU to ensure all threads have completed.
+7. Gather the sorted data chunks back to the root process using MPI_Gather.
+8. repeat step 6-7 alternating between even and odd bubble sort until all threads merge without making any swaps
+9. Merge the sorted data chunks to obtain the final sorted array.
+10. repeat the 
+11. Finalize MPI.
+```
+
+**Merge Sort Pseudo Code:**
 
 ```
 // merge helper function takes in an array along with left, middle, and right indices
@@ -66,50 +106,10 @@ merge_sort(array, left, right):
 	merge(array, begin, mid, end)
 ```
 
+Merge sort lends itself well to parallelization since the different recursive calls at the same level work with different parts of the array, so they do not depend on each other (and won’t be written to/read from at the same time). To adapt this algorithm for use with MPI, different MPI processes would each be given a subarray to perform the merge sort algorithm on (using MPI_Scatter), ultimately resulting in an entirely sorted original array. When using CUDA, a similar process would occur using CUDA threads to execute merge sort in parallel on different subsections of the original array on a GPU.
 
-Bubble Sort Pseudo Code:
-
-Bubble sort in parellel uses a slight variation known as Odd-even or Brick sort.
-This odd even variation spreads the data access out slightly so that there can be parellel computation. alternating between 
-odd and even ensures that two threads can never be attempting to read/write the same index in the array at the same time. 
-
-```
-odd even sort Pseudo Code:
-
-for i from 1 to n-1 with step 2:
-    if arr[i] > arr[i + 1]:
-	swap arr[i] and arr[i + 1]
-	sorted = false
-
-
-for i from 2 to n-2 with step 2:
-    if arr[i] > arr[i + 1]:
-	swap arr[i] and arr[i + 1]
-	sorted = false
-
- 
-
-1. Initialize MPI and get process rank and size.
-2. Determine the total size of the input
-3. Calculate the size of each data chunk for each process (chunk_size = ARRAY_SIZE / num_processes).
-4. Allocate memory for the local data on each process.
-5. If rank == 0:
-   a. Initialize the entire array on the root process.
-   b. Scatter the array to all processes using MPI_Scatter.
-6. Perform the following steps in parallel on each process using CUDA:
-   a. Load the local data chunk into GPU memory.
-   b. have each thread perform odd-even bubble sort on its set of data
-   c. Synchronize the GPU to ensure all threads have completed.
-7. Gather the sorted data chunks back to the root process using MPI_Gather.
-8. repeat step 6-7 alternating between even and odd bubble sort until all threads merge without making any swaps
-9. Merge the sorted data chunks to obtain the final sorted array.
-10. repeat the 
-11. Finalize MPI.
-```
-
-
-
-References: 
+**References:** 
 - https://www.geeksforgeeks.org/merge-sort/
 - https://www.geeksforgeeks.org/odd-even-sort-brick-sort/
 - https://www.geeksforgeeks.org/odd-even-transposition-sort-brick-sort-using-pthreads/
+- http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
