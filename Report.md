@@ -73,6 +73,7 @@ Bubble sort in parellel uses a slight variation known as Odd-even or Brick sort.
 This odd even variation spreads the data access out slightly so that there can be parellel computation. alternating between 
 odd and even ensures that two threads can never be attempting to read/write the same index in the array at the same time. 
 
+```
 odd even sort Pseudo Code:
 
 for i from 1 to n-1 with step 2:
@@ -104,7 +105,7 @@ for i from 2 to n-2 with step 2:
 9. Merge the sorted data chunks to obtain the final sorted array.
 10. repeat the 
 11. Finalize MPI.
-
+```
 
 
 
