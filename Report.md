@@ -19,8 +19,28 @@ We plan on communicating through Slack.
 
 ## 4. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 - Bubble Sort (MPI + CUDA)
-- Quick Sort (MPI + CUDA)
+- Quick Sort (MPI + OpenMP)
 - Merge Sort (MPI + CUDA)
+
+**Quick Sort Pseudo Code:**
+```
+1. choose a pivot from the unsorted array
+2. give each process an even slice of the unsorted array
+3. broadcast the pivot out to each process 
+4. in each process:
+	-Quicksort step: the process's array will be sorted into left <= pivot <= right (happening in parallel)
+	-recursively calls quicksort until done
+	-lower half of processes send "higher list" to the higher half of processes and vice versa
+6. Processes divide into chunks again and the algorithm (step 4) repeats
+7. After Log P(num processes) recursions each process i will have lower values than process i+1
+8. Sequential quicksort ensues for each process.
+
+Using MPI_Send & Recv as well as Collective Communication (to broadcast the pivot) and create groups of processes.
+Number of threads is to be taken in as a variable as well as number of elements in the array.
+
+```
+
+
 
 **Bubble Sort Pseudo Code:**
 
