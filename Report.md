@@ -18,7 +18,8 @@ We will implement 3 parallel sorting algorithms (bubble, quick, and merge sort) 
 ## 4. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 - Bubble Sort (MPI + CUDA)
 - Quick Sort (MPI + OpenMP)
-- Merge Sort (MPI + CUDA)
+- Merge Sort (MPI)
+- Bitonic Sort (CUDA)
 
 ## 3. _due 11/08_ Pseudocode for each algorithm and implementation
 
@@ -125,6 +126,8 @@ merge_sort(array, left, right):
 ```
 
 Merge sort lends itself well to parallelization since the different recursive calls at the same level work with different parts of the array, so they do not depend on each other (and won’t be written to/read from at the same time). To adapt this algorithm for use with MPI, different MPI processes would each be given a subarray to perform the merge sort algorithm on (using MPI_Scatter), ultimately resulting in an entirely sorted original array. When using CUDA, a similar process would occur using CUDA threads to execute merge sort in parallel on different subsections of the original array on a GPU.
+
+**Bitonic Sort Pseudo Code:**
 
 **References:** 
 - https://www.geeksforgeeks.org/merge-sort/
