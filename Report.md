@@ -20,6 +20,7 @@ We will implement 3 parallel sorting algorithms (bubble, quick, and merge sort) 
 - Quick Sort (MPI + OpenMP)
 - Merge Sort (MPI + CUDA)
 
+## 3. _due 11/08_ Pseudocode for each algorithm and implementation
 
 **Bubble Sort Pseudo Code:**
 
@@ -130,3 +131,10 @@ Merge sort lends itself well to parallelization since the different recursive ca
 - https://www.geeksforgeeks.org/odd-even-sort-brick-sort/
 - https://www.geeksforgeeks.org/odd-even-transposition-sort-brick-sort-using-pthreads/
 - http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
+
+## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
+
+For example:
+- Effective use of a GPU (play with problem size and number of threads)
+- Strong scaling to more nodes (same problem size, increase number of processors)
+- Weak scaling (increase problem size, increase number of processors)
