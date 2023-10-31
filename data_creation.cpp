@@ -26,8 +26,23 @@ enum sort_type{
     RANDOM
 };
 
-void fillArray(int* values, int start_index, int end_index, int sort_type){ // work each thread will do
-    if (sort_type == SORTED || sort_type == PERTURBED){
+void printArray(int* values, int num_values){
+    cout << "\nArray is: \n";
+    for (int i = 0; i < num_values; i++){
+        cout << values[i] << ", ";
+    }
+
+    cout << endl;
+}
+
+void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){ // work each thread will do
+    int thread_id;
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+
+    int start_index = thread_id * block_size;
+    int end_index = ((thread_id + 1) * block_size) -1;
+    
+    if (sort_type == SORTED){
         int i = start_index;
         while (i <= end_index){
             values[i] = i;
@@ -50,48 +65,60 @@ void fillArray(int* values, int start_index, int end_index, int sort_type){ // w
             i++;
         }
     }
+    else if (sort_type == PERTURBED){
+        int i = start_index;
+        while (i <= end_index){
+            values[i] = i;
+            if (i % 100 == 0){
+                values[i] = rand() % (NUM_VALS); 
+            }
+            i++;
+        }
+
+    }
 }
 
 
 
-void createData(int numThreads, int* values, int numValues, int sortType, int thread_id){
- // call fill array for each thread 
- // total process that the main will call 
+void createData(int numThreads, int* values_array, int NUM_VALS, int sortType){
+    int thread_id;
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    int block_size = NUM_VALS / numThreads;
+
+    if (thread_id == 0){
+        values_array = (int*) malloc( NUM_VALS * sizeof(int));
+    }
     
-    int start_index, end_index;
-    int block_size = numValues / numThreads;
-    start_index = block_size * thread_id;
-    end_index = block_size * (thread_id +1) - 1;
+    int* thread_values_array = (int*) malloc (block_size * sizeof(int));
 
-    fillArray(values, start_index, end_index, sortType);
+    MPI_Scatter(nullptr, block_size, MPI_INT, thread_values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
 
-}
+    fillArray(thread_values_array, block_size, NUM_VALS, sortType);
 
+    printArray(thread_values_array, block_size);
 
-void printArray(int* values, int num_values, int thread_id){
-    cout << "\nArray is: Thread id is: "<< thread_id << "\n";
-    for (int i = 0; i < num_values; i++){
-        cout << values[i] << ", ";
+    if (thread_id > 0){
+        MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
-    cout << endl;
+    if (thread_id == 0){
+        MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+        //printArray(values_array, NUM_VALS);
+    }
+
 }
+
+
 
 
 int main(int argc, char* argv[]){
     int NUM_VALS = atoi(argv[1]);
     int num_threads;
-    int thread_id;
-    int *values = (int*) malloc( NUM_VALS * sizeof(int));
+    int *values_array = nullptr;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
-    MPI_Comm_rank(MPI_COMM_WORLD,&thread_id);
 
-    createData(num_threads, values, NUM_VALS, 0, thread_id);
-
-    if (thread_id == 0){
-        printArray(values, NUM_VALS, thread_id);
-    }
+    createData(num_threads, values_array, NUM_VALS, SORTED);
 
     MPI_Finalize();
     
