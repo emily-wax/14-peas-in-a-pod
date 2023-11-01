@@ -91,20 +91,21 @@ void createData(int numThreads, int* values_array, int NUM_VALS, int sortType){
     
     int* thread_values_array = (int*) malloc (block_size * sizeof(int));
 
-    MPI_Scatter(nullptr, block_size, MPI_INT, thread_values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+    //MPI_Scatter(values_array, block_size, MPI_INT, thread_values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
 
     fillArray(thread_values_array, block_size, NUM_VALS, sortType);
 
     printArray(thread_values_array, block_size);
 
-    if (thread_id > 0){
-        MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
-    }
+    // if (thread_id > 0){
+    //     MPI_Gather(thread_values_array, block_size, MPI_INT, nullptr, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+    // }
 
-    if (thread_id == 0){
+    //if (thread_id == 0){
         MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
         //printArray(values_array, NUM_VALS);
-    }
+    //}
+    //delete[] thread_values_array;
 
 }
 
@@ -114,12 +115,19 @@ void createData(int numThreads, int* values_array, int NUM_VALS, int sortType){
 int main(int argc, char* argv[]){
     int NUM_VALS = atoi(argv[1]);
     int num_threads;
-    int *values_array = nullptr;
+    int* values_array = nullptr;
+    int thread_id;
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
 
     createData(num_threads, values_array, NUM_VALS, SORTED);
 
+
+    if (thread_id == 0){
+        delete[] values_array;
+    }
     MPI_Finalize();
     
 }
