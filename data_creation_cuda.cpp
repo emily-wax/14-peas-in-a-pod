@@ -2,15 +2,17 @@
  * FILE: data_creation.c
  * DESCRIPTION:
  *   This code will be used to create the 4 different types of data we want to
- *   sort on using MPI.
+ *   sort on using CUDA threads.
  * AUTHOR: Roee Belkin, Ansley Thompson, Emily Wax .
- * LAST REVISED: 10/31/23
+ * LAST REVISED: 11/01/23
  ******************************************************************************/
-#include "mpi.h"
-#include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <iostream>
+#include <stdio.h>
+#include <time.h>
+
+#include <cuda_runtime.h>
+#include <cuda.h>
+
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
@@ -98,6 +100,7 @@ void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
             if (i % 100 == 0)
             {
                 values[i] = rand() % (NUM_VALS);
+                values[i] = rand() % (100)
             }
             i++;
             start_val++;
@@ -107,28 +110,23 @@ void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
 
 void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
 {
-    int thread_id;
-    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    // int thread_id;
     int block_size = NUM_VALS / numThreads;
 
-    if (thread_id == 0)
-    {
-        values_array = (int *)malloc(NUM_VALS * sizeof(int));
-    }
+    // if (thread_id == 0)
+    // {
+    values_array = (int *)malloc(NUM_VALS * sizeof(int));
+    // }
 
     int *thread_values_array = (int *)malloc(block_size * sizeof(int));
 
-    // MPI_Scatter(values_array, block_size, MPI_INT, thread_values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
-
-    fillArray(thread_values_array, block_size, NUM_VALS, sortType);
+    // may need to initialize block_size and numThreads with dim3 instead of int... we shall see
+    // call fillArray with numThreads on block_size data
+    // block size may/should be the number of blocks not size
+    fillArray<<<block_size, numThreads>>>(thread_values_array, block_size, NUM_VALS, sortType);
 
     // printArray(thread_values_array, block_size);
 
-    // if (thread_id > 0){
-    //     MPI_Gather(thread_values_array, block_size, MPI_INT, nullptr, block_size, MPI_INT, 0, MPI_COMM_WORLD);
-    // }
-
-    // if (thread_id == 0){
     MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (thread_id == 0)
@@ -148,15 +146,10 @@ int main(int argc, char *argv[])
     int *values_array = nullptr;
     int thread_id;
 
-    MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_threads);
-    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
-
     createData(num_threads, values_array, NUM_VALS, SORTED);
 
     if (thread_id == 0)
     {
         delete[] values_array;
     }
-    MPI_Finalize();
 }
