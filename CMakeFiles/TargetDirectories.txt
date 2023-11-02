@@ -1,3 +1,0 @@
-/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/CMakeFiles/rebuild_cache.dir
-/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/CMakeFiles/edit_cache.dir
-/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/CMakeFiles/data_creation.dir

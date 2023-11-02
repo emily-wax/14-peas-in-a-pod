@@ -39,11 +39,10 @@ void printArray(int *values, int num_values)
 }
 
 // TODO: clean up the code in this function
-void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
+void fillArray(int *values, int block_size, int NUM_VALS, int numThreads, int sort_type)
 { // work each thread will do
-    int thread_id, num_threads;
-    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_threads);
+    int num_threads = numThreads;
+    int thread_id = threadIdx.x + blockDim.x * blockIdx.x;
 
     int start_val, end_val;
 
@@ -100,7 +99,6 @@ void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
             if (i % 100 == 0)
             {
                 values[i] = rand() % (NUM_VALS);
-                values[i] = rand() % (100)
             }
             i++;
             start_val++;
@@ -110,46 +108,39 @@ void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
 
 void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
 {
-    // int thread_id;
     int block_size = NUM_VALS / numThreads;
 
-    // if (thread_id == 0)
-    // {
     values_array = (int *)malloc(NUM_VALS * sizeof(int));
-    // }
 
     int *thread_values_array = (int *)malloc(block_size * sizeof(int));
 
     // may need to initialize block_size and numThreads with dim3 instead of int... we shall see
     // call fillArray with numThreads on block_size data
     // block size may/should be the number of blocks not size
-    fillArray<<<block_size, numThreads>>>(thread_values_array, block_size, NUM_VALS, sortType);
 
-    // printArray(thread_values_array, block_size);
+    // sending different parts of values array to different threads to sort, then memcpying all of them back
 
-    MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+    fillArray<<<block_size, numThreads>>>(thread_values_array, block_size, NUM_VALS, numThreads, sortType);
 
-    if (thread_id == 0)
-    {
-        printArray(values_array, NUM_VALS);
-    }
+    // gather all data somehow
 
-    //}
+    printArray(values_array, NUM_VALS);
     // delete[] thread_values_array;
 }
 
+// take in arguments in the form *.grace_job NUM_VALS NUM_THREADS
 int main(int argc, char *argv[])
 {
     int NUM_VALS = atoi(argv[1]);
-    int num_threads;
+    int NUM_THREADS = atoi(argv[2]);
     // nullptr won't matter to worker threads
     int *values_array = nullptr;
     int thread_id;
 
-    createData(num_threads, values_array, NUM_VALS, SORTED);
+    createData(NUM_THREADS, values_array, NUM_VALS, SORTED);
 
-    if (thread_id == 0)
-    {
-        delete[] values_array;
-    }
+    // if (thread_id == 0)
+    // {
+    delete[] values_array;
+    // }
 }
