@@ -1,18 +1,19 @@
 /******************************************************************************
 * FILE: quicksort.cpp
 * DESCRIPTION:  
-*   This file is the start of the quicksort algorithm
+*   This file is the start of the quicksort algorithm using scatter/merge
 * AUTHOR: Emily Wax
 * LAST REVISED: 11/01/23
 ******************************************************************************/
-// #include "mpi.h"
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <limits.h>
-// #include <iostream>
-// #include <caliper/cali.h>
-// #include <caliper/cali-manager.h>
-// #include <adiak.hpp>
+#include "mpi.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <iostream>
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+#include <adiak.hpp>
+#include "data_creation.cpp"
 
 /*
 Helpful MPI calls:
@@ -23,189 +24,122 @@ Helpful MPI calls:
 
 */
 
-#include "mpi.h"
-#include<stdio.h>
-#include <stdlib.h>
-#include "math.h"
-#include <stdbool.h>
+// TODO: implement swap function
 
-/*
-    Divides the array given into two partitions
-        - Lower than pivot
-        - Higher than pivot
-    and returns the Pivot index in the array
-*/
-int partition(int *arr, int low, int high){
-    int pivot = arr[high];
-    int i = (low - 1);
-    int j,temp;
-    for (j=low;j<=high-1;j++){
-	if(arr[j] < pivot){
-	     i++;
-             temp=arr[i];  
-             arr[i]=arr[j];
-             arr[j]=temp;	
-	}
-    }
-    temp=arr[i+1];  
-    arr[i+1]=arr[high];
-    arr[high]=temp; 
-    return (i+1);
+/* pass in indices */
+void swap(int* arr, int x, int y)
+{
+    int temp = arr[x];
+    arr[x] = arr[y];
+    arr[y] = temp;
 }
 
-/*
-    Hoare Partition - Starting pivot is the middle point
-    Divides the array given into two partitions
-        - Lower than pivot
-        - Higher than pivot
-    and returns the Pivot index in the array
-*/
-int hoare_partition(int *arr, int low, int high){
-    int middle = floor((low+high)/2);
-    int pivot = arr[middle];
-    int j,temp;
-    // move pivot to the end
-    temp=arr[middle];  
-    arr[middle]=arr[high];
-    arr[high]=temp;
 
-    int i = (low - 1);
-    for (j=low;j<=high-1;j++){
-        if(arr[j] < pivot){
-            i++;
-            temp=arr[i];  
-            arr[i]=arr[j];
-            arr[j]=temp;	
+// TODO: implement quicksort function
+void quicksort(int* arr, int start_index, int end_index)
+{
+    // Index keeps track of pivot's real spot
+    int pivot, index;
+
+    // If size is 1, return
+    if( (start_index - end_index) < 1)
+        return;
+
+    // Pick pivot and move it to the front
+    pivot = arr[(start_index + end_index)/ 2];
+    swap( arr, end_index, (start_index + end_index) / 2);
+
+    // Iterate through array and swap to divide into low and high
+    // last index is skipped because it is pivot. 
+    index = start_index - 1;
+    for( int i = start_index + 1; i < end_index; i++ )
+    {
+        if(arr[i] < pivot)
+        {
+            index++;
+            swap(arr, index, i);
         }
     }
-    // move pivot back
-    temp=arr[i+1];  
-    arr[i+1]=arr[high];
-    arr[high]=temp; 
 
-    return (i+1);
-}
+    // Put pivot back into correct spot
+    // incrementing index one more because we put pivot at the back
+    index++;
+    swap(arr, index, end_index);
 
-/*
-    Simple sequential Quicksort Algorithm
-*/
-void quicksort(int *number,int first,int last){
-    if(first<last){
-        int pivot_index = partition(number, first, last);
-        quicksort(number,first,pivot_index-1);
-        quicksort(number,pivot_index+1,last);
-    }
-}
+    // Recursive call to quicksort
+    quicksort(arr, start_index, index - start_index);
+    quicksort(arr, index + 1, end_index);
 
-/*
-    Functions that handles the sharing of subarrays to the right clusters
-*/
-int quicksort_recursive(int* arr, int arrSize, int currProcRank, int maxRank, int rankIndex) {
-    MPI_Status status;
-
-    // Calculate the rank of the Cluster which I'll send the other half
-    int shareProc = currProcRank + pow(2, rankIndex);
-    // Move to lower layer in the tree
-    rankIndex++;
-
-    // If no Cluster is available, sort sequentially by yourself and return
-    if (shareProc > maxRank) {
-        MPI_Barrier(MPI_COMM_WORLD);
-	    quicksort(arr, 0, arrSize-1 );
-        return 0;
-    }
-    // Divide array in two parts with the pivot in between
-    int j = 0;
-    int pivotIndex;
-    pivotIndex = hoare_partition(arr, j, arrSize-1 );
-
-    // Send partition based on size(always send the smaller part), 
-    // Sort the remaining partitions,
-    // Receive sorted partition
-    if (pivotIndex <= arrSize - pivotIndex) {
-        MPI_Send(arr, pivotIndex , MPI_INT, shareProc, pivotIndex, MPI_COMM_WORLD);
-	    quicksort_recursive((arr + pivotIndex+1), (arrSize - pivotIndex-1 ), currProcRank, maxRank, rankIndex); 
-        MPI_Recv(arr, pivotIndex , MPI_INT, shareProc, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    }
-    else {
-        MPI_Send((arr + pivotIndex+1), arrSize - pivotIndex-1, MPI_INT, shareProc, pivotIndex + 1, MPI_COMM_WORLD);
-        quicksort_recursive(arr, (pivotIndex), currProcRank, maxRank, rankIndex);
-        MPI_Recv((arr + pivotIndex+1), arrSize - pivotIndex-1, MPI_INT, shareProc, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    }
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]){
     int NUM_VALS = atoi(argv[1]);
-    int unsorted_array[NUM_VALS]; 
-    int array_size = NUM_VALS;
-    int size, rank;
-    // Start Parallel Execution
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    if(rank==0){
-        // --- RANDOM ARRAY GENERATION ---
-        printf("Creating Random List of %d elements\n", NUM_VALS);
-        int j = 0;
-        for (j = 0; j < NUM_VALS; ++j) {
-            unsorted_array[j] =(int) rand() % 1000;
-        }
-        printf("Created\n");
-	}
-
-    // Calculate in which layer of the tree each Cluster belongs
-    int rankPower = 0;
-    while (pow(2, rankPower) <= rank){
-        rankPower++;
-    }
-    // Wait for all clusters to reach this point 
-    MPI_Barrier(MPI_COMM_WORLD);
-    double start_timer, finish_timer;
-    if (rank == 0) {
-	    start_timer = MPI_Wtime();
-        // Cluster Zero(Master) starts the Execution and
-        // always runs recursively and keeps the left bigger half
-        quicksort_recursive(unsorted_array, array_size, rank, size - 1, rankPower);    
-    }else{ 
-        // All other Clusters wait for their subarray to arrive,
-        // they sort it and they send it back.
-        MPI_Status status;
-        int subarray_size;
-        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        // Capturing size of the array to receive
-        MPI_Get_count(&status, MPI_INT, &subarray_size);
-	    int source_process = status.MPI_SOURCE;     
-        int subarray[subarray_size];
-        MPI_Recv(subarray, subarray_size, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        quicksort_recursive(subarray, subarray_size, rank, size - 1, rankPower);
-        MPI_Send(subarray, subarray_size, MPI_INT, source_process, 0, MPI_COMM_WORLD);
-    };
+    int num_threads;
+    // nullptr won't matter to worker threads
+    int* values_array = nullptr;
+    int* sub_array;
+    int* chunk_received;
+    int thread_id;
+    int chunk_size, received_size;
+    MPI_Status status;
     
-    if(rank==0){
-        finish_timer = MPI_Wtime();
-	    printf("Total time for %d Clusters : %2.2f sec \n",size, finish_timer-start_timer);
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
 
-        // --- VALIDATION CHECK ---
-        printf("Checking.. \n");
-        bool error = false;
-        int i=0;
-        for(i=0;i<SIZE-1;i++) { 
-            if (unsorted_array[i] > unsorted_array[i+1]){
-		        error = true;
-                printf("error in i=%d \n", i);
-            }
+    createData(num_threads, values_array, NUM_VALS, SORTED);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Broadcast number of elements (may not need to do this)
+    // MPI_Bcast(&NUM_VALS)
+
+    // Compute Chunk Size - cover if it isn't evenly divisible maybe
+    chunk_size = NUM_VALS / num_threads;
+    sub_array = (int*)malloc(chunk_size * sizeof(int));
+
+    // Scatter data
+    MPI_Scatter(values_array, chunk_size, MPI_INT, sub_array, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
+    free(values_array);
+    values_array = NULL;
+    // free array?
+
+    // have each chunk quicksort independently
+    quicksort(sub_array, 0, chunk_size - 1);
+
+    // use send and receive to collect and merge data
+    for(int step = 1; step < num_threads; step *= 2)
+    {
+        if(thread_id % (2 * step) != 0)
+        {
+            MPI_Send(sub_array, chunk_size, MPI_INT, thread_id - step, 0, MPI_COMM_WORLD);
+            break;
         }
-        if(error)
-            printf("Error..Not sorted correctly\n");
-        else
-            printf("Correct!\n");        
+
+        
+
+        if(thread_id + step < num_threads)
+        {
+            if ( NUM_VALS >= chunk_size * (thread_id + 2 * step))
+            {
+                received_size = chunk_size * step;
+            } else
+            {
+                received_size = NUM_VALS - chunk_size * (thread_id + step);
+            }
+
+            chunk_received = (int*)malloc(received_size * sizeof(int));
+            
+            MPI_Recv(chunk_received, received_size, MPI_INT, thread_id + step, 0, MPI_COMM_WORLD, &status);
+
+            values_array = 
+        }
     }
-       
+
+    if (thread_id == 0){
+        delete[] values_array;
+    }
     MPI_Finalize();
-    // End of Parallel Execution
-    return 0;
+    
 }
-
-
-// Need quicksort function that takes in partition and does swapping
