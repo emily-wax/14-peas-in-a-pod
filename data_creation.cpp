@@ -64,12 +64,11 @@ void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){ // wor
         }
     }
     else if (sort_type == REVERSE_SORTED){
-        int i = end_val;
-        int array_index = start_index;
-        while (i >= start_val){
-            values[array_index] = i;
-            i--;
-            array_index++;
+        int i = start_index;
+        while (end_val >= start_val){
+            values[i] = end_val;
+            end_val--;
+            i++;
         }
     }
     else if (sort_type == RANDOM){
@@ -81,9 +80,11 @@ void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){ // wor
     }
     else if (sort_type == PERTURBED){
         int i = start_index;
+        int perturb_check; 
         while (i <= end_index){
             values[i] = start_val;
-            if (i % 100 == 0){
+            perturb_check = rand() % 100;
+            if (perturb_check == 1){
                 values[i] = rand() % (NUM_VALS); 
             }
             i++;
@@ -140,7 +141,9 @@ int main(int argc, char* argv[]){
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
 
-    createData(num_threads, values_array, NUM_VALS, SORTED);
+    cout << "Size is: " << num_threads << endl;
+
+    createData(num_threads, values_array, NUM_VALS, RANDOM);
 
 
     if (thread_id == 0){

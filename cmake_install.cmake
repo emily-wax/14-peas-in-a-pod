@@ -1,4 +1,4 @@
-# Install script for directory: /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod
+# Install script for directory: /scratch/user/roeebelkin/14-peas-in-a-pod
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/scratch/user/roeebelkin/14-peas-in-a-pod/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
