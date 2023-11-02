@@ -147,6 +147,7 @@ int main(int argc, char* argv[]){
 
 
     if (thread_id == 0){
+        printArray(values_array, NUM_VALS);
         delete[] values_array;
     }
     MPI_Finalize();
