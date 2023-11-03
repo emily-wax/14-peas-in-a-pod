@@ -37,6 +37,15 @@ enum sort_type{
 };
 
 
+bool check_array(float* arr, int length){
+  for (int i = 0; i < length -1; i++){
+    if (arr[i] > arr[i+1]){
+      return false;
+    }
+  }
+  return true; 
+}
+
 void print_elapsed(clock_t start, clock_t stop)
 {
   double elapsed = ((double) (stop - start)) / CLOCKS_PER_SEC;
@@ -203,6 +212,10 @@ int main(int argc, char *argv[])
   print_elapsed(start, stop);
 
   array_print(values, NUM_VALS);
+  if (!check_array(values, NUM_VALS)){
+    printf("ERROR ARRAY IS NOT SORTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n");
+  }
+
   // Store results in these variables.
   float effective_bandwidth_gb_s;
   float bitonic_sort_step_time;
