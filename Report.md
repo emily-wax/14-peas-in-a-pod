@@ -136,8 +136,13 @@ Merge sort lends itself well to parallelization since the different recursive ca
 - http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
 
 ## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
-
-For example:
-- Effective use of a GPU (play with problem size and number of threads)
 - Strong scaling to more nodes (same problem size, increase number of processors)
-- Weak scaling (increase problem size, increase number of processors)
+    - For each algorithm and each problem size, graph average runtime (across input types) vs number of threads
+    - Multiple lines per graph representing timings for different sections (computation time, communication time, etc.)
+    - Identify and compare at which point adding more threads does not result in further speedup for each algorithm and problem size
+- Compare sorting algorithms’ parallel performance on different input types (sorted, random, reverse, sorted with 1% perturbed)
+    - Bar graph comparing overall runtimes for each input type for the largest chosen problem size
+    - Identify which input type(s) each algorithm performs best on
+    - Compare overall parallel performance across algorithms using MPI/CUDA
+ 
+Runtimes will be recorded using Caliper regions (separating the timings for data generation, computation, communication, and correctness checking).
