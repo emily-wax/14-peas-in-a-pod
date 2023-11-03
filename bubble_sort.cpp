@@ -25,14 +25,55 @@ enum sort_type{
     RANDOM
 };
 
-void printArray(int* values, int num_values){
-    cout << "\nArray is: \n";
+void printArray(int* values, int num_values, int thread_id){
+    cout << "for Thread_id: " << thread_id << "\nArray is: \n";
     for (int i = 0; i < num_values; i++){
         cout << values[i] << ", ";
     }
 
+    cout << endl << endl;
+}
+
+
+void printArrayAll(int* thread_values_array, int block_size){
+    int num_threads;
+    int thread_id;
+
+    MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    for (int i = 0; i < num_threads; i++){
+        if (thread_id == i){
+            printArray(thread_values_array, block_size, thread_id);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+}
+
+
+void printArrayTogether(int* thread_values_array, int block_size){
+    int num_threads;
+    int thread_id;
+
+    MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    for (int i = 0; i < num_threads; i++){
+        if (thread_id == i){
+            for (int i = 0; i < block_size; i++){
+                if ((i == block_size -1) && (thread_id == num_threads -1)){
+                    cout << thread_values_array[i];
+                }
+                else{
+                    cout << thread_values_array[i] << ", ";
+                }
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
     cout << endl;
 }
+
+
 
 // TODO: clean up the code in this function
 void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){ // work each thread will do
@@ -106,35 +147,40 @@ bool swap(int* values_array, int i, int j){
 }
 
 
-bool sequential_bubble(int* values_array, int start_index, int end_index){
-    bool swapped = false; 
-    cout << "woooooooooo\n";
-    for (int i = start_index; i < end_index; i++){
-        swapped = swap(values_array, i, i+1);
+void sequential_bubble(int* values_array, int start_index, int end_index){
+    bool run = true; 
+    while(run){
+        run = false; 
+        for (int i = start_index; i < end_index -1; i++){
+            if (swap(values_array, i, i+1)){
+                run = true; 
+            }
+        }
     }
-    return swapped; 
 }
 
 
 void bubble_sort(int* thread_values_array, int NUM_VALS){
     int num_threads;
     int thread_id; 
+    MPI_Status statusSend, statusRecv; 
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
 
-    bool even_swap = true;
-    bool odd_swap = true;
     bool step = true; // even vs odd step 
     int block_size = NUM_VALS / num_threads;
     
-    while (!even_swap && !odd_swap){
+    for (int k = 0; k < num_threads; k++){
         if (step){
-            even_swap = sequential_bubble(thread_values_array, 0, block_size);
+            // printArrayAll(thread_values_array, block_size);
+            sequential_bubble(thread_values_array, 0, block_size);
+            // printArrayAll(thread_values_array, block_size);
             if (thread_id % 2 == 0){
                 // recieve block end_index to end_index + block size, from thread_id 1 greater than self
                 MPI_Recv(&thread_values_array[block_size], block_size, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
+                // printArrayAll(thread_values_array, block_size);
                 sequential_bubble(thread_values_array, 0,  2 * block_size);
+                // printArrayAll(thread_values_array, block_size);
                 // send second half of list (end_index to end_index + block size) to thread_id 1 greater than self
                 MPI_Send(&thread_values_array[block_size], block_size, MPI_INT, thread_id+1, 0, MPI_COMM_WORLD);
             }
@@ -148,16 +194,22 @@ void bubble_sort(int* thread_values_array, int NUM_VALS){
             step = !step;
         }
         else{
-            odd_swap = sequential_bubble(thread_values_array, 0, block_size);
-            if (thread_id % 2 == 1 && (thread_id != 0) && thread_id != num_threads -1){ // not the first or last thread because those would cause the program to hang
-
+            //printArrayAll(thread_values_array, block_size);
+            sequential_bubble(thread_values_array, 0, block_size);
+            //printArrayAll(thread_values_array, block_size);
+            if ((thread_id % 2 == 1) && (thread_id != num_threads -1)){ // not the first or last thread because those would cause the program to hang
                 // recieve block end_index to end_index + block size, from thread_id 1 greater than self
-                MPI_Recv(&thread_values_array[block_size], block_size, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                //printArrayAll(thread_values_array, block_size);
+                MPI_Recv(&thread_values_array[block_size], block_size, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, &statusRecv);
+                //cout << "thread id in the top loop is: " << thread_id <<" source is: " << statusRecv.MPI_SOURCE << endl;
+                //printArrayAll(thread_values_array, block_size);
                 sequential_bubble(thread_values_array, 0, 2 * block_size);
+                //printArrayAll(thread_values_array, block_size);
                 // send second half of list (end_index to end_index + block size) to thread_id 1 greater than self
                 MPI_Send(&thread_values_array[block_size], block_size, MPI_INT, thread_id+1, 0, MPI_COMM_WORLD);
             }
-            else if (thread_id % 2 == 0){
+            else if ((thread_id % 2 == 0) && (thread_id != 0)){
+                //cout << "thread id in the bottom loop: " << thread_id << endl;
                 //send block start_index to end index to thread_id 1 less than self
                 MPI_Send(thread_values_array, block_size, MPI_INT, thread_id-1, 0, MPI_COMM_WORLD);
                 //recieve new block start_index to end index from thread_id 1 less than self
@@ -190,19 +242,12 @@ int main(int argc, char* argv[]){
 
     //cout << "Size is: " << num_threads << " Block Size is: " << block_size << endl;
 
-    fillArray(thread_values_array, block_size, NUM_VALS, REVERSE_SORTED);
+    fillArray(thread_values_array, block_size, NUM_VALS, PERTURBED);
 
     bubble_sort(thread_values_array, NUM_VALS);
 
-    //cout << "POST SORT\n\n" << endl;
 
-
-    for (int i = 0; i < num_threads; i++){
-        if (thread_id == i){
-            printArray(thread_values_array, block_size);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
+    printArrayTogether(thread_values_array, block_size);
 
     MPI_Finalize();
 }
