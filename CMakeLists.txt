@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(data_creation_cuda LANGUAGES CUDA CXX)
+project(bitonic LANGUAGES CUDA CXX)
 
 find_package(MPI REQUIRED)
 find_package(caliper REQUIRED)
 find_package(adiak REQUIRED)
 
-add_executable(data_creation_cuda data_creation_cuda.cu)
+add_executable(bitonic bitonic.cu)
 
 message(STATUS "MPI includes : ${MPI_INCLUDE_PATH}")
 message(STATUS "CUDA includes : ${CUDA_INCLUDE_DIRS}")
@@ -17,5 +17,5 @@ include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${caliper_INCLUDE_DIR})
 include_directories(${adiak_INCLUDE_DIRS})
 
-target_link_libraries(data_creation_cuda PRIVATE MPI::MPI_CXX)
-target_link_libraries(data_creation_cuda PRIVATE caliper)
+target_link_libraries(bitonic PRIVATE MPI::MPI_CXX)
+target_link_libraries(bitonic PRIVATE caliper)
