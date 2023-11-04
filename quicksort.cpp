@@ -24,7 +24,37 @@ Helpful MPI calls:
 
 */
 
-// TODO: implement swap function
+// TODO: implement merge function
+
+int* merge(int* arr1, int size1, int* arr2, int size2)
+{
+    int* result = (int*)malloc( (size1 + size2) * sizeof(int));
+    int i = 0;
+    int j = 0;
+
+    for(k = 0; k < size1 + size2; k++)
+    {
+        if(i >= size1)
+        {
+            result[k] = arr2[j];
+            j++;
+        }
+        else if (j >= size2)
+        {
+            result[k] = arr1[i];
+            i++;
+        }
+        else if (arr1[i] < arr2[j])
+        {
+            result[k] = arr1[i];
+            i++;
+        }
+        else{
+            result[k] = arr2[j];
+            j++;
+        }
+    }
+}
 
 /* pass in indices */
 void swap(int* arr, int x, int y)
@@ -133,7 +163,7 @@ int main(int argc, char* argv[]){
             
             MPI_Recv(chunk_received, received_size, MPI_INT, thread_id + step, 0, MPI_COMM_WORLD, &status);
 
-            values_array = 
+            values_array = // merged results
         }
     }
 
