@@ -24,6 +24,17 @@ enum sort_type
     RANDOM
 };
 
+void printArray(int *values, int num_values)
+{
+    cout << "\nArray is: \n";
+    for (int i = 0; i < num_values; i++)
+    {
+        cout << values[i] << ", ";
+    }
+
+    cout << endl;
+}
+
 void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
 { // work each thread will do
     int thread_id, num_threads;
@@ -93,6 +104,29 @@ void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
     }
 }
 
+void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
+{
+    int thread_id;
+    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    int block_size = NUM_VALS / numThreads;
+
+    if (thread_id == 0)
+    {
+        values_array = (int *)malloc(NUM_VALS * sizeof(int));
+    }
+
+    int *thread_values_array = (int *)malloc(block_size * sizeof(int));
+
+    fillArray(thread_values_array, block_size, NUM_VALS, sortType);
+
+    MPI_Gather(thread_values_array, block_size, MPI_INT, values_array, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if (thread_id == 0)
+    {
+        printArray(values_array, NUM_VALS);
+    }
+}
+
 void merge(int *merged, int *left_arr, int *right_arr, int left_size, int right_size)
 {
     int left_ptr = 0;
@@ -128,8 +162,31 @@ void merge(int *merged, int *left_arr, int *right_arr, int left_size, int right_
     }
 }
 
-void sequential_merge()
+void sequential_mergesort(int *arr, int left, int right)
 {
+    if (left >= right)
+    {
+        return;
+    }
+
+    int mid = left + (right - left) / 2;
+
+    sequential_mergesort(arr, left, mid);
+    sequential_mergesort(arr, mid + 1, right);
+
+    int left_arr[mid - left + 1];
+    int right_arr[right - mid];
+
+    for (int i = 0; i < mid - left + 1; i++)
+    {
+        left_arr[i] = arr[left + i];
+    }
+    for (int i = 0; i < right - mid; i++)
+    {
+        right_arr[i] = arr[mid + 1 + i];
+    }
+
+    merge(arr, left_arr, right_arr, mid - left + 1, right - mid);
 }
 
 int main(int argc, char **argv)
@@ -144,4 +201,15 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
 
     int block_size = NUM_VALS / num_threads;
+
+    int *values_array_global = nullptr;
+
+    createData(num_threads, values_array_global, NUM_VALS, RANDOM);
+
+    if (thread_id == 0)
+    {
+        cout << NUM_VALS << " " << num_threads << " " << block_size << endl;
+        delete[] values_array_global;
+    }
+    MPI_Finalize();
 }
