@@ -84,6 +84,7 @@ void fillArray(int *values, int block_size, int NUM_VALS, int sort_type)
         while (i <= end_index)
         {
             values[i] = rand() % (INT_MAX);
+            // values[i] = rand() % (100);
             i++;
         }
     }
@@ -128,7 +129,46 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
     }
 }
 
-void merge(int *merged, int *left_arr, int *right_arr, int left_size, int right_size, int arr_ptr)
+int *merge(int *left_arr, int *right_arr, int left_size, int right_size)
+{
+    int left_ptr = 0;
+    int right_ptr = 0;
+    int merged_ptr = 0;
+
+    int *merged = (int *)malloc((left_size + right_size) * sizeof(int));
+
+    while (left_ptr < left_size && right_ptr < right_size)
+    {
+        if (left_arr[left_ptr] <= right_arr[right_ptr])
+        {
+            merged[merged_ptr] = left_arr[left_ptr];
+            left_ptr++;
+        }
+        else
+        {
+            merged[merged_ptr] = right_arr[right_ptr];
+            right_ptr++;
+        }
+        merged_ptr++;
+    }
+
+    while (left_ptr < left_size)
+    {
+        merged[merged_ptr] = left_arr[left_ptr];
+        left_ptr += 1;
+        merged_ptr += 1;
+    }
+    while (right_ptr < right_size)
+    {
+        merged[merged_ptr] = right_arr[right_ptr];
+        right_ptr += 1;
+        merged_ptr += 1;
+    }
+
+    return merged;
+}
+
+void merge_inplace(int *merged, int *left_arr, int *right_arr, int left_size, int right_size, int arr_ptr)
 {
     int left_ptr = 0;
     int right_ptr = 0;
@@ -187,15 +227,16 @@ void sequential_mergesort(int *arr, int left, int right)
         right_arr[i] = arr[mid + 1 + i];
     }
 
-    merge(arr, left_arr, right_arr, mid - left + 1, right - mid, left);
+    merge_inplace(arr, left_arr, right_arr, mid - left + 1, right - mid, left);
 }
 
-void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, MPI_Comm comm, int *global_array)
+void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, MPI_Comm comm, int **global_array)
 {
     int curr_height = 0;
     int *left_data = thread_array;
     int *right_data = nullptr;
     int *merged_data = nullptr;
+    int block_size = arr_size;
 
     while (curr_height < tree_height)
     {
@@ -213,8 +254,8 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
 
             // merge two branches' data
             merged_data = (int *)malloc(2 * arr_size * sizeof(int));
-            merge(merged_data, left_data, right_data, arr_size, arr_size, arr_size); // will merge in place
-            // TODO: fix merge ptr
+            // merge(merged_data, left_data, right_data, arr_size, arr_size, thread_id * block_size); // will merge in place
+            merged_data = merge(left_data, right_data, arr_size, arr_size);
 
             // update info for future while loop iterations
             left_data = merged_data; // since left branch is the one that will continue working
@@ -238,7 +279,7 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
 
     if (thread_id == 0)
     {
-        global_array = left_data;
+        *global_array = left_data;
     }
 }
 
@@ -272,13 +313,9 @@ int main(int argc, char **argv)
     // sort each thread's array using sequential merge sort
     sequential_mergesort(values_array_thread, 0, block_size - 1);
 
-    // if (thread_id == 1) {
-    // printArray(values_array_thread, block_size);
-    // }
-
     // call merge sort
     int merge_tree_height = log2(num_threads);
-    mergesort(merge_tree_height, thread_id, values_array_thread, block_size, MPI_COMM_WORLD, values_array_global);
+    mergesort(merge_tree_height, thread_id, values_array_thread, block_size, MPI_COMM_WORLD, &values_array_global);
 
     if (thread_id == 0)
     {
@@ -287,7 +324,7 @@ int main(int argc, char **argv)
         delete[] values_array_global;
     }
 
-    delete[] values_array_thread;
+    // delete[] values_array_thread;
 
     MPI_Finalize();
 }
