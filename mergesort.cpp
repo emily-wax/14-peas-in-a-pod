@@ -13,6 +13,7 @@
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
+#include <bits/stdc++.h>
 
 using namespace std;
 
@@ -110,10 +111,10 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
     int block_size = NUM_VALS / numThreads;
 
-    if (thread_id == 0)
-    {
-        values_array = (int *)malloc(NUM_VALS * sizeof(int));
-    }
+    // if (thread_id == 0)
+    // {
+    //     values_array = (int *)malloc(NUM_VALS * sizeof(int));
+    // }
 
     int *thread_values_array = (int *)malloc(block_size * sizeof(int));
 
@@ -127,11 +128,11 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
     }
 }
 
-void merge(int *merged, int *left_arr, int *right_arr, int left_size, int right_size)
+void merge(int *merged, int *left_arr, int *right_arr, int left_size, int right_size, int arr_ptr)
 {
     int left_ptr = 0;
     int right_ptr = 0;
-    int merged_ptr = left_ptr;
+    int merged_ptr = arr_ptr;
 
     while (left_ptr < left_size && right_ptr < right_size)
     {
@@ -186,7 +187,59 @@ void sequential_mergesort(int *arr, int left, int right)
         right_arr[i] = arr[mid + 1 + i];
     }
 
-    merge(arr, left_arr, right_arr, mid - left + 1, right - mid);
+    merge(arr, left_arr, right_arr, mid - left + 1, right - mid, left);
+}
+
+void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, MPI_Comm comm, int *global_array)
+{
+    int curr_height = 0;
+    int *left_data = thread_array;
+    int *right_data = nullptr;
+    int *merged_data = nullptr;
+
+    while (curr_height < tree_height)
+    {
+        // check if left or right "parent" in merge tree
+        bool is_left_branch = thread_id % (1 << (curr_height + 1)) == 0; // thread_id % 2^(curr_height + 1) == 0
+
+        if (is_left_branch)
+        {
+            // find corresponding right branch id
+            int right_branch = thread_id + (1 << curr_height); // thread_id + 2^curr_height
+
+            // receive right branch's data
+            right_data = (int *)malloc(arr_size * sizeof(int));
+            MPI_Recv(right_data, arr_size, MPI_INT, right_branch, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            // merge two branches' data
+            merged_data = (int *)malloc(2 * arr_size * sizeof(int));
+            merge(merged_data, left_data, right_data, arr_size, arr_size, arr_size); // will merge in place
+            // TODO: fix merge ptr
+
+            // update info for future while loop iterations
+            left_data = merged_data; // since left branch is the one that will continue working
+            arr_size *= 2;
+            delete[] right_data;
+            merged_data = nullptr;
+            curr_height += 1;
+        }
+        else
+        { // right branch
+            // find corresponding left branch id and send data to it
+            int left_branch = thread_id - (1 << curr_height); // thread_id - 2^curr_height
+            MPI_Send(left_data, arr_size, MPI_INT, left_branch, 0, MPI_COMM_WORLD);
+            if (curr_height > 0)
+            {
+                delete[] left_data; // holding merged data that has been sent to left branch in this case
+            }
+            curr_height = tree_height; // while loop terminates for right branches, number of active threads halves at each level of tree
+        }
+    }
+
+    if (thread_id == 0)
+    {
+        global_array = left_data;
+    }
 }
 
 int main(int argc, char **argv)
@@ -203,13 +256,38 @@ int main(int argc, char **argv)
     int block_size = NUM_VALS / num_threads;
 
     int *values_array_global = nullptr;
+    if (thread_id == 0)
+    {
+        values_array_global = (int *)malloc(NUM_VALS * sizeof(int));
+    }
 
+    // should be done by all threads not just root, only yields one gathered global array
     createData(num_threads, values_array_global, NUM_VALS, RANDOM);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // all threads given own block of array
+    int *values_array_thread = (int *)malloc(block_size * sizeof(int));
+    MPI_Scatter(values_array_global, block_size, MPI_INT, values_array_thread, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // sort each thread's array using sequential merge sort
+    sequential_mergesort(values_array_thread, 0, block_size - 1);
+
+    // if (thread_id == 1) {
+    // printArray(values_array_thread, block_size);
+    // }
+
+    // call merge sort
+    int merge_tree_height = log2(num_threads);
+    mergesort(merge_tree_height, thread_id, values_array_thread, block_size, MPI_COMM_WORLD, values_array_global);
 
     if (thread_id == 0)
     {
-        cout << NUM_VALS << " " << num_threads << " " << block_size << endl;
+        // cout << NUM_VALS << " " << num_threads << " " << block_size << endl;
+        printArray(values_array_global, NUM_VALS);
         delete[] values_array_global;
     }
+
+    delete[] values_array_thread;
+
     MPI_Finalize();
 }
