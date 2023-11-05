@@ -6,18 +6,25 @@
 * LAST REVISED: 11/2/23
 ******************************************************************************/
 #include "mpi.h"
+
+
+#include <algorithm>
+#include <compare>
+#include <iostream>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <iostream>
-#include <compare>
 #include <vector>
-#include <algorithm>
+
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
 
 using namespace std;
+
+/* global variables */
+int num_procs;
+int proc_id;
 
 enum sort_type{
     SORTED,
@@ -26,8 +33,9 @@ enum sort_type{
     RANDOM
 };
 
-static int intcompare(const void *i, const void *j)
-{
+
+/* Integer compare function to use with quicksort() */
+static int intCompare(const void *i, const void *j){
     if((*(int *)i) > (*(int *)j))
         return 1;
     if((*(int *)i) < (*(int *)j))
@@ -35,30 +43,86 @@ static int intcompare(const void *i, const void *j)
     return 0;
 }
 
-void printArray(int* values, int num_values, int thread_id){
-    cout << "for Thread_id: " << thread_id << "\nArray is: \n";
-    for (int i = 0; i < num_values; i++){
-        cout << values[i] << ", ";
+/* check sort - compares each processes values to make sure it's sorted
+                and is sorted in comparison to others. */
+void check_sort(vector<int> thread_values_array, int size){
+
+    // each thread is going to check itself to see if it's sorted
+    for(int i = 0; i < size-1; i++){
+        if (thread_values_array[i] > thread_values_array[i+1]){
+            cout << "ERROR NOT SORTED\n" << endl;
+        }
     }
 
-    cout << endl << endl;
+    // thread sends its [0] to id-1
+    if (proc_id > 0)
+        MPI_Send(&thread_values_array[0], 1, MPI_INT, proc_id-1, 0, MPI_COMM_WORLD);
+
+    // thread sends its [-1] to id+1
+    // check if index is correct 
+    if (proc_id < num_procs-1)
+        MPI_Send(&thread_values_array[thread_values_array.size() - 1], 1, MPI_INT, proc_id+1, 0, MPI_COMM_WORLD);
+
+    // thread receives id-1's [-1] and checks to see if it's < its [0]
+    int above, below;
+    if (proc_id > 0){
+        MPI_Recv(&below, 1, MPI_INT, proc_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        if (below > thread_values_array[0]){
+            cout << "ERROR NOT SORTED\n" << endl;
+        }
+    }
+
+    // thread receives id+1's [0] and checks to see if it's > its [-1]
+    if (proc_id < num_procs-1){
+        MPI_Recv(&above, 1, MPI_INT, proc_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        if (above < thread_values_array.back()){
+            cout << "ERROR NOT SORTED\n" << endl;
+        }
+    }
+
 }
 
-// TODO: clean up the code in this function
+/* choose_splitters - chooses p - 1 local splitters. Root process gathers
+                       all process splittesr, sorts, and chooses global
+                       splitters */
+void choose_splitters(int* local_splitter, int* values, int num_vals){
+    int* global_splitter;
+
+    // Choose p-1 local splitters (evenly separated)
+    for(int i = 0; i < (num_procs - 1); i++)
+    {
+        local_splitter[i] = values[num_vals/(num_procs * num_procs) * (i+1)];
+    }
+
+    // Send local splitters back to root process
+    global_splitter = (int *)malloc( sizeof(int) * num_procs * (num_procs - 1));
+    MPI_Gather( local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // Root: run sort on splitters array
+    if(proc_id == 0)
+    {
+        qsort( (char *) global_splitter, num_procs * (num_procs - 1), sizeof(int), intCompare);
+
+        // Choose p-1 Global splitters (evenly separated)
+        for(int i = 0; i < num_procs - 1; i++)
+        {
+            local_splitter[i] = global_splitter[(num_procs - 1) * (i + 1)];
+            
+        }
+    }
+}
+
+/* Data Generation functions: generates data per process based on sorting type enum */
 void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){ 
-    int thread_id, num_threads;
-    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
-    MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
 
     int start_val, end_val;
 
-
     if( sort_type == REVERSE_SORTED){
-        start_val = ( num_threads - thread_id - 1) * block_size;
-        end_val = ((( num_threads - thread_id)) * block_size) - 1;
+        start_val = ( num_procs - proc_id - 1) * block_size;
+        end_val = ((( num_procs - proc_id)) * block_size) - 1;
     } else{
-        start_val = thread_id * block_size;
-        end_val = ((thread_id + 1) * block_size) - 1;
+        start_val = proc_id * block_size;
+        end_val = ((proc_id + 1) * block_size) - 1;
     }
 
     int start_index = 0;
@@ -103,59 +167,28 @@ void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){
     }
 }
 
-void check_sort(vector<int> thread_values_array, int size){
-    int num_threads;
-    int thread_id;
-    MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
-    MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
 
-    // each thread is going to check itself to see if it's sorted
-    for(int i = 0; i < size-1; i++){
-        if (thread_values_array[i] > thread_values_array[i+1]){
-            cout << "ERROR NOT SORTED\n" << endl;
-        }
+/* Function to print a process's value array */
+void printArray(int* values, int num_values, int proc_id){
+    cout << "for Thread_id: " << proc_id << "\nArray is: \n";
+    for (int i = 0; i < num_values; i++){
+        cout << values[i] << ", ";
     }
 
-    // thread sends its [0] to id-1
-    if (thread_id > 0)
-        MPI_Send(&thread_values_array[0], 1, MPI_INT, thread_id-1, 0, MPI_COMM_WORLD);
-
-    // thread sends its [-1] to id+1
-    // check if index is correct 
-    if (thread_id < num_threads-1)
-        MPI_Send(&thread_values_array[thread_values_array.size() - 1], 1, MPI_INT, thread_id+1, 0, MPI_COMM_WORLD);
-
-    // thread receives id-1's [-1] and checks to see if it's < its [0]
-    int above, below;
-    if (thread_id > 0){
-        MPI_Recv(&below, 1, MPI_INT, thread_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if (below > thread_values_array[0]){
-            cout << "ERROR NOT SORTED\n" << endl;
-        }
-    }
-
-    // thread receives id+1's [0] and checks to see if it's > its [-1]
-    if (thread_id < num_threads-1){
-        MPI_Recv(&above, 1, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if (above < thread_values_array.back()){
-            cout << "ERROR NOT SORTED\n" << endl;
-        }
-    }
-
-    cout << "WOOHOO SORT CHECK DONE" << endl;
+    cout << endl << endl;
 }
 
 
 int main(int argc, char* argv[]){
     // Command Line Arguments: size, processes
     int NUM_VALS = atoi(argv[1]);
-    int num_procs, proc_id, curr_val;
+    int curr_val;
     int* local_splitter;
-    int* global_splitter;
     MPI_Status status;
     
     // MPI initialization 
     MPI_Init(&argc, &argv);
+    // EW TODO: make these global
     MPI_Comm_size(MPI_COMM_WORLD,&num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
 
@@ -163,41 +196,12 @@ int main(int argc, char* argv[]){
     int block_size = NUM_VALS / num_procs;
     int* proc_values_array = (int*) malloc (block_size * sizeof(int));
 
-    // Data Generation
+    /* Data Generation */
     fillArray(proc_values_array, block_size, NUM_VALS, PERTURBED);
-
-    // Have each process sort locally (STL qsort) - optional, probably will not
-
-    // Local Splitters ( p = # processors)
 
     local_splitter = (int *) malloc(sizeof(int) * (num_procs-1));
 
-        // Choose p-1 local splitters (evenly separated)
-    for(int i = 0; i < (num_procs - 1); i++)
-    {
-        local_splitter[i] = proc_values_array[NUM_VALS/(num_procs * num_procs) * (i+1)];
-    }
-
-    // Send local splitters back to root process
-    global_splitter = (int *)malloc( sizeof(int) * num_procs * (num_procs - 1));
-    MPI_Gather( local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    // Root: run sort on splitters array
-    if(proc_id == 0)
-    {
-        qsort( (char *) global_splitter, num_procs * (num_procs - 1), sizeof(int), intcompare);
-
-        // Choose p-1 Global splitters (evenly separated)
-        for(int i = 0; i < num_procs - 1; i++)
-        {
-            local_splitter[i] = global_splitter[(num_procs - 1) * (i + 1)];
-            
-        }
-        // for(int i = 0; i < (num_procs - 1); i++)
-        // {
-        //     cout << "global splitter: " << local_splitter[i] << endl;
-        // }
-    }
+    choose_splitters( local_splitter, proc_values_array, NUM_VALS );
 
     // Broadcast Global Splitters to all other processes
     MPI_Bcast( local_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
