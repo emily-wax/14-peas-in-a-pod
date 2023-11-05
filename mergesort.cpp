@@ -280,6 +280,19 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
     }
 }
 
+bool is_sorted(int *arr, int arr_size)
+{
+    for (int i = 1; i < arr_size; i++)
+    {
+        if (arr[i] < arr[i - 1])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int main(int argc, char **argv)
 {
     int NUM_VALS = atoi(argv[1]);
@@ -317,6 +330,7 @@ int main(int argc, char **argv)
     if (thread_id == 0)
     {
         printArray(values_array_global, NUM_VALS);
+        cout << "Sorted?: " << is_sorted(values_array_global, NUM_VALS) << endl;
         delete[] values_array_global;
     }
 
