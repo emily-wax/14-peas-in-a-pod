@@ -1,5 +1,5 @@
 # CSCE 435 Group project
-
+## 0. Group number: 14
 ## 1. Group members:
 1. Roee Belkin
 2. Harini Kumar
@@ -65,8 +65,17 @@ for i from 2 to n-2 with step 2:
 
 **Sample Sort Pseudo Code:**
 ```
-
-
+1. Set up MPi Threads/Generate Data
+2. Choose (p-1) local splitters in each process (evenly separated)
+3. Gather all local splitters into root function (global splitters list)
+4. Sort new "global splitters" list
+5. Narrow down to p-1 global splitters (evenly separated)
+6. Broadcast global splitters to all processes
+7. Perform bucket sort in each process using global splitters as indices
+8. Each process sends buckets to other processes (based on bucket indices)
+9. Each process receives values in its bucket from other processes
+10. Local sort is performed on each process
+11. Check if sorted
 ```
 
 **Merge Sort Pseudo Code:**
