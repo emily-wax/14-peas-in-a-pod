@@ -112,6 +112,7 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
     int block_size = NUM_VALS / numThreads;
 
+    // moved this to main
     // if (thread_id == 0)
     // {
     //     values_array = (int *)malloc(NUM_VALS * sizeof(int));
@@ -127,45 +128,6 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
     {
         printArray(values_array, NUM_VALS);
     }
-}
-
-int *merge(int *left_arr, int *right_arr, int left_size, int right_size)
-{
-    int left_ptr = 0;
-    int right_ptr = 0;
-    int merged_ptr = 0;
-
-    int *merged = (int *)malloc((left_size + right_size) * sizeof(int));
-
-    while (left_ptr < left_size && right_ptr < right_size)
-    {
-        if (left_arr[left_ptr] <= right_arr[right_ptr])
-        {
-            merged[merged_ptr] = left_arr[left_ptr];
-            left_ptr++;
-        }
-        else
-        {
-            merged[merged_ptr] = right_arr[right_ptr];
-            right_ptr++;
-        }
-        merged_ptr++;
-    }
-
-    while (left_ptr < left_size)
-    {
-        merged[merged_ptr] = left_arr[left_ptr];
-        left_ptr += 1;
-        merged_ptr += 1;
-    }
-    while (right_ptr < right_size)
-    {
-        merged[merged_ptr] = right_arr[right_ptr];
-        right_ptr += 1;
-        merged_ptr += 1;
-    }
-
-    return merged;
 }
 
 void merge_inplace(int *merged, int *left_arr, int *right_arr, int left_size, int right_size, int arr_ptr)
@@ -230,6 +192,45 @@ void sequential_mergesort(int *arr, int left, int right)
     merge_inplace(arr, left_arr, right_arr, mid - left + 1, right - mid, left);
 }
 
+int *merge(int *left_arr, int *right_arr, int left_size, int right_size)
+{
+    int left_ptr = 0;
+    int right_ptr = 0;
+    int merged_ptr = 0;
+
+    int *merged = (int *)malloc((left_size + right_size) * sizeof(int));
+
+    while (left_ptr < left_size && right_ptr < right_size)
+    {
+        if (left_arr[left_ptr] <= right_arr[right_ptr])
+        {
+            merged[merged_ptr] = left_arr[left_ptr];
+            left_ptr++;
+        }
+        else
+        {
+            merged[merged_ptr] = right_arr[right_ptr];
+            right_ptr++;
+        }
+        merged_ptr++;
+    }
+
+    while (left_ptr < left_size)
+    {
+        merged[merged_ptr] = left_arr[left_ptr];
+        left_ptr += 1;
+        merged_ptr += 1;
+    }
+    while (right_ptr < right_size)
+    {
+        merged[merged_ptr] = right_arr[right_ptr];
+        right_ptr += 1;
+        merged_ptr += 1;
+    }
+
+    return merged;
+}
+
 void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, MPI_Comm comm, int **global_array)
 {
     int curr_height = 0;
@@ -254,7 +255,6 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
 
             // merge two branches' data
             merged_data = (int *)malloc(2 * arr_size * sizeof(int));
-            // merge(merged_data, left_data, right_data, arr_size, arr_size, thread_id * block_size); // will merge in place
             merged_data = merge(left_data, right_data, arr_size, arr_size);
 
             // update info for future while loop iterations
@@ -269,10 +269,7 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
             // find corresponding left branch id and send data to it
             int left_branch = thread_id - (1 << curr_height); // thread_id - 2^curr_height
             MPI_Send(left_data, arr_size, MPI_INT, left_branch, 0, MPI_COMM_WORLD);
-            if (curr_height > 0)
-            {
-                delete[] left_data; // holding merged data that has been sent to left branch in this case
-            }
+            delete[] left_data;        // holding data that has been sent to left branch, not needed
             curr_height = tree_height; // while loop terminates for right branches, number of active threads halves at each level of tree
         }
     }
@@ -319,12 +316,9 @@ int main(int argc, char **argv)
 
     if (thread_id == 0)
     {
-        // cout << NUM_VALS << " " << num_threads << " " << block_size << endl;
         printArray(values_array_global, NUM_VALS);
         delete[] values_array_global;
     }
-
-    // delete[] values_array_thread;
 
     MPI_Finalize();
 }
