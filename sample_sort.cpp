@@ -1,4 +1,4 @@
-/******************************************************************************
+ /******************************************************************************
 * FILE: sample_sort.c
 * DESCRIPTION:  
 *   Sample sort MPI implementation
@@ -11,6 +11,8 @@
 #include <limits.h>
 #include <iostream>
 #include <compare>
+#include <vector>
+#include <algorithm>
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
@@ -24,7 +26,7 @@ enum sort_type{
     RANDOM
 };
 
-static intcompare(const void *i, const void *j)
+static int intcompare(const void *i, const void *j)
 {
     if((*(int *)i) > (*(int *)j))
         return 1;
@@ -105,8 +107,10 @@ void fillArray(int* values, int block_size, int NUM_VALS, int sort_type){
 int main(int argc, char* argv[]){
     // Command Line Arguments: size, processes
     int NUM_VALS = atoi(argv[1]);
-    int num_procs, proc_id;
+    int num_procs, proc_id, curr_val;
     int* local_splitter;
+    int* global_splitter;
+    MPI_Status status;
     
     // MPI initialization 
     MPI_Init(&argc, &argv);
@@ -118,53 +122,150 @@ int main(int argc, char* argv[]){
     int* proc_values_array = (int*) malloc (block_size * sizeof(int));
 
     // Data Generation
-    fillArray(proc_values_array, block_size, NUM_VALS, PERTURBED);
+    fillArray(proc_values_array, block_size, NUM_VALS, REVERSE_SORTED);
+    
+    cout << "Process " << proc_id << " has generated data\n" << endl;
 
     // Have each process sort locally (STL qsort) - optional, probably will not
 
     // Local Splitters ( p = # processors)
 
-    local_splitter = (int *) malloc (sizeof (int) * (num_procs-1));
+    local_splitter = (int *) malloc(sizeof(int) * (num_procs-1));
 
         // Choose p-1 local splitters (evenly separated)
     for(int i = 0; i < (num_procs - 1); i++)
     {
-        local_splitter[i] = proc_values_array[NUM_VALS/(num_procs * num_procs) * (i+1)]
+        local_splitter[i] = proc_values_array[NUM_VALS/(num_procs * num_procs) * (i+1)];
     }
 
+    cout << "Process " << proc_id << " has chosen local splitters\n" << endl;
+
     // Send local splitters back to root process
-    global_splitter = (int *)malloc( sizeof(int) * num_procs * (num_procs - 1))
+    global_splitter = (int *)malloc( sizeof(int) * num_procs * (num_procs - 1));
     MPI_Gather( local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Root: run sort on splitters array
     if(proc_id == 0)
     {
+
         qsort( (char *) global_splitter, num_procs * (num_procs - 1), sizeof(int), intcompare);
 
         // Choose p-1 Global splitters (evenly separated)
         for(int i = 0; i < num_procs - 1; i++)
         {
-            local_splitter[i] = global_splitter[(num_procs - 1) *(i + 1)];
+            local_splitter[i] = global_splitter[(num_procs - 1) * (i + 1)];
+            
+        }
+        for(int i = 0; i < (num_procs - 1); i++)
+        {
+            cout << "global splitter: " << local_splitter[i] << endl;
         }
     }
 
     // Broadcast Global Splitters to all other processes
     MPI_Bcast( local_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
-
+    
     // Each process:
-        // Use global splitters to choose bucket indices
+    // Use global splitters to choose bucket indices
+    vector<vector<int>> buckets;
 
-        // *** sort local process values into buckets
-            // space wise: iterate over array and send to different buckets over iteration? (since it's all sorted from low to high)
-                // can I send part of an array?
+    // figure out own bounds .. 
 
-        // Send values to each process based on its bucket indices
+    // create a vector for each bucket (p)
+    for(int i = 0; i < num_procs; i++)
+    {
+        vector<int> vec;
+        buckets.push_back(vec);
+    }
+    // *** sort local process values into buckets
+    // space wise: iterate over array and send to different buckets over iteration? (since it's all sorted from low to high)
+            // can I send part of an array?
 
-        // create a vector for each processes (use vector of vectors)
+    // bounds are inclusive on low end, exclusive on high end [)
+    for(int i = 0; i < block_size; i++)
+    {
+        curr_val = proc_values_array[i];
+
+        for(int j = 0; j < (num_procs - 1); j++)
+        {
+            // cover low bounds
+            if (curr_val < local_splitter[j])
+            {
+                (buckets[j]).push_back(curr_val);
+                break;
+            }
+
+            // cover highest splitter bounds (last iteration)
+            if ( j == (num_procs - 2) )
+            {
+                (buckets[ num_procs - 1 ].push_back(curr_val));
+            }
+        }
+    }
+
+    /* bucket testing */
+    // if( proc_id == 1 )
+    // {
+    //     for(int i = 0; i < num_procs; i++)
+    //     {
+    //         cout << "bucket " << i << ":"; 
+    //         for(int j = 0; j < buckets[i].size(); j++)
+    //             cout << " " << buckets[i][j];
+    //         cout <<  " " << endl;
+    //     }
+    // }
+
+    // Send values to each process based on its bucket indices (except self)
+    int* recvbuf = (int *)malloc(sizeof(int) * block_size);
+    vector<int> finalBucket;
+    int recv_cnt;
+    for(int i = 0; i < num_procs; i++)
+    {
+        if( i != proc_id )
+        {
+            MPI_Recv(recvbuf, block_size, MPI_INT, i, 0, MPI_COMM_WORLD, &status );
+            // received item count and add to bucket vector
+            MPI_Get_count(&status, MPI_INT, &recv_cnt);
+            for(int k = 0; k < recv_cnt; k++)
+            {
+                finalBucket.push_back(recvbuf[k]);
+            }
+        }
+        else
+        {
+            for(int j = 0; j < num_procs; j++)
+            {
+                
+                if( j != proc_id)
+                {
+                    MPI_Send( (buckets[j]).data(), (buckets[j]).size(), MPI_INT, j, 0, MPI_COMM_WORLD);
+                }
+            }
+        }
+    }
+
+    if( proc_id == 0 )
+    {
+
+    }
+
+    // add own into bucket
+    for(int i = 0; i < (buckets[proc_id]).size(); i++)
+    {
+        finalBucket.push_back(buckets[proc_id][i]);
+    }
 
     // Run sort on each process
+    sort(finalBucket.begin(), finalBucket.end());
 
     // Check if actually sorted
+    if(proc_id == 0)
+    {
+        cout << "final bucket size " << finalBucket.size() << endl;
+        for(int i = 0; i < finalBucket.size(); i++)
+            cout << finalBucket[i] << endl;
+    }
 
+    MPI_Finalize();
 
 }
