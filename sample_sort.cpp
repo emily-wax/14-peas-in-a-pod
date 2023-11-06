@@ -6,7 +6,7 @@
 * LAST REVISED: 11/2/23
 ******************************************************************************/
 #include "mpi.h"
-
+#include <string>
 
 #include <algorithm>
 #include <compare>
@@ -25,6 +25,17 @@ using namespace std;
 /* global variables */
 int num_procs;
 int proc_id;
+
+/* Define Caliper Region Names*/
+const char* main_cali = "main"; //TODO
+const char* data_init = "data_init";
+const char* correctness_check = "correctness_check"; 
+const char* comm = "comm"; //TODO
+const char* comm_small = "comm_small"; //TODO
+const char* comm_large = "comm_large"; //TODO
+const char* comp = "comp";
+const char* comp_small = "comp_small"; //TODO
+const char* comp_large = "comp_large"; //TODO
 
 enum sort_type{
     SORTED,
@@ -98,26 +109,38 @@ void choose_splitters(int* local_splitter, int* values, int num_vals){
     int* global_splitter;
 
     // Choose p-1 local splitters (evenly separated)
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_small);
     for(int i = 0; i < (num_procs - 1); i++)
     {
         local_splitter[i] = values[num_vals/(num_procs * num_procs) * (i+1)];
     }
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_small);
 
     // Send local splitters back to root process
     global_splitter = (int *)malloc( sizeof(int) * num_procs * (num_procs - 1));
-    MPI_Gather( local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(comm_small);
+    MPI_Gather(local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
+    CALI_MARK_END(comm);
+    CALI_MARK_END(comm_small);
 
     // Root: run sort on splitters array
     if(proc_id == 0)
     {
+        CALI_MARK_BEGIN(comp);
+        CALI_MARK_BEGIN(comp_small);
         qsort( (char *) global_splitter, num_procs * (num_procs - 1), sizeof(int), intCompare);
 
         // Choose p-1 Global splitters (evenly separated)
         for(int i = 0; i < num_procs - 1; i++)
         {
             local_splitter[i] = global_splitter[(num_procs - 1) * (i + 1)];
-            
         }
+        CALI_MARK_END(comp);
+        CALI_MARK_END(comp_small);
     }
 }
 
@@ -215,9 +238,16 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
     {
         if( i != proc_id )
         {
+            CALI_MARK_BEGIN(comm);
+            CALI_MARK_BEGIN(comm_large);
             MPI_Recv(recvbuf, block_size, MPI_INT, i, 0, MPI_COMM_WORLD, &status );
+            CALI_MARK_END(comm_large);
+            CALI_MARK_END(comm);
+
             // received item count and add to bucket vector
             MPI_Get_count(&status, MPI_INT, &recv_cnt);
+
+            
             for(int k = 0; k < recv_cnt; k++)
             {
                 finalBucket.push_back(recvbuf[k]);
@@ -230,7 +260,13 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
                 
                 if( j != proc_id)
                 {
+                    CALI_MARK_BEGIN(comm);
+                    CALI_MARK_BEGIN(comm_large);
+
                     MPI_Send( (buckets[j]).data(), (buckets[j]).size(), MPI_INT, j, 0, MPI_COMM_WORLD);
+
+                    CALI_MARK_END(comm_large);
+                    CALI_MARK_END(comm);
                 }
             }
         }
@@ -246,29 +282,42 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
 }
 
 int main(int argc, char* argv[]){
+
     // Command Line Arguments: size, processes
     int NUM_VALS = atoi(argv[1]);
     int* local_splitter;
+    int sorttype;
     
+    sorttype = PERTURBED;
     // MPI initialization 
     MPI_Init(&argc, &argv);
-    // EW TODO: make these global
+
     MPI_Comm_size(MPI_COMM_WORLD,&num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
+
+    CALI_MARK_BEGIN(main_cali);
 
     // Divide data into process values
     int block_size = NUM_VALS / num_procs;
     int* proc_values_array = (int*) malloc (block_size * sizeof(int));
 
     /* Data Generation */
-    fillArray(proc_values_array, block_size, NUM_VALS, PERTURBED);
+    CALI_MARK_BEGIN(data_init);
+    fillArray(proc_values_array, block_size, NUM_VALS, sorttype);
+    CALI_MARK_END(data_init);
 
     local_splitter = (int *) malloc(sizeof(int) * (num_procs-1));
 
     choose_splitters( local_splitter, proc_values_array, NUM_VALS );
 
     // Broadcast Global Splitters to all other processes
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(comm_small);
+
     MPI_Bcast( local_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    CALI_MARK_END(comm_small);
+    CALI_MARK_END(comm);
     
     // Each process:
     // Use global splitters to choose bucket indices
@@ -281,6 +330,10 @@ int main(int argc, char* argv[]){
         buckets.push_back(vec);
     }
 
+
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_large);
+
     fillBuckets( buckets, local_splitter, proc_values_array, block_size);
 
     // Send values to each process based on its bucket indices (except self)
@@ -289,10 +342,50 @@ int main(int argc, char* argv[]){
     finalBucket = bucketComm( buckets, block_size);
 
     // Run sort on each process
+
     sort(finalBucket.begin(), finalBucket.end());
 
+    CALI_MARK_END(comp_large);
+    CALI_MARK_END(comp);
+
     // Check if actually sorted
+    CALI_MARK_BEGIN(correctness_check);
+
     check_sort(finalBucket, finalBucket.size());
+
+    CALI_MARK_END(correctness_check);
+
+    CALI_MARK_END(main_cali);
+
+    string sort_string;
+
+    if( sorttype == SORTED)
+    {
+        sort_string = "sorted";
+    } else if( sorttype == PERTURBED){
+        sort_string = "1%/ perturbed";
+    } else if( sorttype == REVERSE_SORTED){
+        sort_string  = "reversed";
+    } else{
+        sort_string = "random";
+    }
+
+    adiak::init(NULL);
+    adiak::launchdate();    // launch date of the job
+    adiak::libraries();     // Libraries used
+    adiak::cmdline();       // Command line used to launch the job
+    adiak::clustername();   // Name of the cluster
+    adiak::value("Algorithm", "Sample Sort"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+    adiak::value("ProgrammingModel", "MPI"); // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int"); // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int)); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", NUM_VALS); // The number of elements in input dataset (1000)
+    adiak::value("InputType", sort_string); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    adiak::value("num_procs", num_procs); // The number of processors (MPI ranks)
+    adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Handwritten"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+
+
 
     MPI_Finalize();
 
