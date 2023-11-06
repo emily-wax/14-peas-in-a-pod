@@ -1,10 +1,11 @@
-/*
- * Parallel bitonic sort using CUDA.
- * Compile with
- * nvcc bitonic_sort.cu
- * Based on http://www.tools-of-computing.com/tc/CS/Sorts/bitonic_sort.htm
- * License: BSD 3
- */
+ /******************************************************************************
+ * FILE: data_creation_cuda.cu
+ * DESCRIPTION:
+ *   This code will be used to create the 4 different types of data we want to
+ *   sort on using CUDA threads.
+ * AUTHOR: Roee Belkin, Ansley Thompson
+ * LAST REVISED: 11/01/23
+ ******************************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,10 +19,17 @@ int THREADS;
 int BLOCKS;
 int NUM_VALS;
 
+const char* main_region = "main_region";
+const char* data_init_region = "data_init_region";
+const char* comm_region = "comm_region";
+const char* comm_small_region = "comm_small_region";
+const char* comm_large_region = "comm_large_region";
+const char* correctness_check_region = "correctness_check_region";
 const char* bitonic_sort_step_region = "bitonic_sort_step";
 const char* cudaMemcpy_host_to_device = "cudaMemcpy_host_to_device";
 const char* cudaMemcpy_device_to_host = "cudaMemcpy_device_to_host";
 
+cudaEvent_t main_time;
 cudaEvent_t bitonic_sort_step_start_time;
 cudaEvent_t bitonic_sort_step_end_time;
 cudaEvent_t host_to_device_start_time;
@@ -136,11 +144,11 @@ int bitonic_sort(float *values)
   cudaMalloc((void**) &dev_values, size);
   
   //MEM COPY FROM HOST TO DEVICE
-  CALI_MARK_BEGIN(cudaMemcpy_host_to_device);
+  CALI_MARK_BEGIN(comm_large_region);
   cudaEventRecord(host_to_device_start_time);
   cudaMemcpy(dev_values, values, size, cudaMemcpyHostToDevice);
   cudaEventRecord(host_to_device_end_time);
-  CALI_MARK_END(cudaMemcpy_host_to_device);
+  CALI_MARK_END(comm_large_region);
   cudaEventSynchronize(host_to_device_end_time);
 
   dim3 blocks(BLOCKS,1);    /* Number of blocks   */
@@ -164,11 +172,11 @@ int bitonic_sort(float *values)
   cudaEventSynchronize(bitonic_sort_step_end_time);
   
   //MEM COPY FROM DEVICE TO HOST
-  CALI_MARK_BEGIN(cudaMemcpy_device_to_host);
+  CALI_MARK_BEGIN(comm_large_region);
   cudaEventRecord(device_to_host_start_time);
   cudaMemcpy(values, dev_values, size, cudaMemcpyDeviceToHost);
   cudaEventRecord(device_to_host_end_time);
-  CALI_MARK_END(cudaMemcpy_device_to_host);
+  CALI_MARK_END(comm_large_region);
   cudaFree(dev_values);
   cudaEventSynchronize(device_to_host_end_time);
 
@@ -178,7 +186,8 @@ int bitonic_sort(float *values)
 
 int main(int argc, char *argv[])
 {
-  cudaEventCreate(&bitonic_sort_step_start_time);
+  CALI_MARK_BEGIN(main_region);
+  // cudaEventCreate(&bitonic_sort_step_start_time);
   cudaEventCreate(&bitonic_sort_step_end_time);
   cudaEventCreate(&host_to_device_start_time);
   cudaEventCreate(&host_to_device_end_time);
@@ -201,7 +210,9 @@ int main(int argc, char *argv[])
   float c = 0;
 
   float *values = (float*) malloc( NUM_VALS * sizeof(float));
+  CALI_MARK_BEGIN(data_init_region);
   array_fill(values, NUM_VALS, RANDOM);
+  CALI_MARK_END(data_init_region);
 
   array_print(values, NUM_VALS); 
 
@@ -233,6 +244,8 @@ int main(int argc, char *argv[])
   float temp = (c*2*4*NUM_VALS) /(bitonic_sort_step_time);
   effective_bandwidth_gb_s = temp/1e9;
 
+  CALI_MARK_END(main_region);
+
   printf("bitonic sort step time: %f \n", bitonic_sort_step_time);
   printf("host to device time: %f \n", cudaMemcpy_host_to_device_time);
   printf("device to host time: %f \n", cudaMemcpy_device_to_host_time);
@@ -241,20 +254,22 @@ int main(int argc, char *argv[])
 
 
   adiak::init(NULL);
-  adiak::user();
-  adiak::launchdate();
-  adiak::libraries();
-  adiak::cmdline();
-  adiak::clustername();
-  adiak::value("num_threads", THREADS);
-  adiak::value("num_blocks", BLOCKS);
-  adiak::value("num_vals", NUM_VALS);
-  adiak::value("program_name", "cuda_bitonic_sort");
-  adiak::value("datatype_size", sizeof(float));
-  adiak::value("effective_bandwidth (GB/s)", effective_bandwidth_gb_s);
-  adiak::value("bitonic_sort_step_time", bitonic_sort_step_time);
-  adiak::value("cudaMemcpy_host_to_device_time", cudaMemcpy_host_to_device_time);
-  adiak::value("cudaMemcpy_device_to_host_time", cudaMemcpy_device_to_host_time);
+  adiak::launchdate();    // launch date of the job
+  adiak::libraries();     // Libraries used
+  adiak::cmdline();       // Command line used to launch the job
+  adiak::clustername();   // Name of the cluster
+  adiak::value("Algorithm", "BitonicSort"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+  adiak::value("ProgrammingModel", "CUDA"); // e.g., "MPI", "CUDA", "MPIwithCUDA"
+  adiak::value("Datatype", "float"); // The datatype of input elements (e.g., double, int, float)
+  adiak::value("SizeOfDatatype", 4); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+  adiak::value("InputSize", 1024); // The number of elements in input dataset (1000)
+  adiak::value("InputType", "Random"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+  adiak::value("num_procs", "0"); // The number of processors (MPI ranks)
+  adiak::value("num_threads", 2); // The number of CUDA or OpenMP threads
+  adiak::value("num_blocks", 512); // The number of CUDA blocks 
+  adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
+  adiak::value("implementation_source", "Lab"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+
 
   // Flush Caliper output before finalizing MPI
   mgr.stop();

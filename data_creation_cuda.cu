@@ -3,7 +3,7 @@
  * DESCRIPTION:
  *   This code will be used to create the 4 different types of data we want to
  *   sort on using CUDA threads.
- * AUTHOR: Roee Belkin, Ansley Thompson, Emily Wax .
+ * AUTHOR: Roee Belkin, Ansley Thompson
  * LAST REVISED: 11/01/23
  ******************************************************************************/
 #include <stdlib.h>
