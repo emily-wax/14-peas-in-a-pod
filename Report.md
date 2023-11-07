@@ -13,7 +13,7 @@ Our team will be using a slack group chat to communicate. Seeing as we all alrea
 
 ## 3. _due 10/25_ Project topic
 
-We will implement 3 parallel sorting algorithms (bubble, quick, and merge sort) in MPI and CUDA. We will examine and compare their performance in detail (computation time, communication time, how much data is sent) on a variety of inputs: sorted, random, reverse, sorted with 1% perturbed, etc.  Strong scaling, weak scaling, GPU performance.
+We will implement 3 parallel sorting algorithms (bubble, sample, and merge sort) in MPI and CUDA. We will examine and compare their performance in detail (computation time, communication time, how much data is sent) on a variety of inputs: sorted, random, reverse, sorted with 1% perturbed, etc.  Strong scaling, weak scaling, GPU performance.
 
 ## 4. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 - Bubble Sort (MPI + CUDA)
