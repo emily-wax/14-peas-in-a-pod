@@ -67,16 +67,19 @@ for i from 2 to n-2 with step 2:
 ```
 1. Set up MPi Threads/Generate Data
 2. Choose (p-1) local splitters in each process (evenly separated)
-3. Gather all local splitters into root function (global splitters list)
+3. Gather all local splitters into root function (global splitters list) (MPI_Gather)
 4. Sort new "global splitters" list
 5. Narrow down to p-1 global splitters (evenly separated)
-6. Broadcast global splitters to all processes
-7. Perform bucket sort in each process using global splitters as indices
-8. Each process sends buckets to other processes (based on bucket indices)
-9. Each process receives values in its bucket from other processes
+6. Broadcast global splitters to all processes (MPI_Bcast)
+7. Perform bucket sort in each process using global splitters as indices - use one vector per bucket
+8. Each process sends buckets to other processes (based on bucket indices) (MPI_Send)
+9. Each process receives values in its bucket from other processes (MPI_Recv & MPI_Get_Count)
+	a. receive values into "final bucket" vector, using MPI_Get_Count to size appropriately
 10. Local sort is performed on each process
 11. Check if sorted
 ```
+
+MPI Calls used
 
 **Merge Sort Pseudo Code:**
 
