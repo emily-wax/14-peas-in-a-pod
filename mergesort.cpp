@@ -231,13 +231,12 @@ int *merge(int *left_arr, int *right_arr, int left_size, int right_size)
     return merged;
 }
 
-void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, MPI_Comm comm, int **global_array)
+void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, int **global_array)
 {
     int curr_height = 0;
     int *left_data = thread_array;
     int *right_data = nullptr;
     int *merged_data = nullptr;
-    int block_size = arr_size;
 
     while (curr_height < tree_height)
     {
@@ -278,7 +277,7 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
             int left_branch = thread_id - (1 << curr_height); // thread_id - 2^curr_height
             CALI_MARK_BEGIN("comm");
             CALI_MARK_BEGIN("comm_large");
-            MPI_Send(left_data, arr_size, MPI_INT, left_branch, 0, MPI_COMM_WORLD);
+            MPI_Send(left_data, arr_size, MPI_INT, left_branch, 0, MPI_COMM_WORLD); // left data currently holds the data for this branch
             CALI_MARK_END("comm_large");
             CALI_MARK_END("comm");
             delete[] left_data;        // holding data that has been sent to left branch, not needed
@@ -349,7 +348,7 @@ int main(int argc, char **argv)
 
     // call merge sort
     int merge_tree_height = log2(num_threads);
-    mergesort(merge_tree_height, thread_id, values_array_thread, block_size, MPI_COMM_WORLD, &values_array_global);
+    mergesort(merge_tree_height, thread_id, values_array_thread, block_size, &values_array_global);
 
     if (thread_id == 0)
     {
