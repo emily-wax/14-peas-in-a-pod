@@ -84,48 +84,53 @@ MPI Calls used
 **Merge Sort Pseudo Code:**
 
 ```
-// merge helper function takes in an array along with left, middle, and right indices
-merge(array, left, mid, right):
-	// copying from the original array to two new temporary subarrays
-  	left_array = array[left to mid]
-	right_array = array[mid + 1 to right]	
+mergesort(tree_height, thread_id, thread_array, arr_size, global_array):
+	curr_height = 0
+	left_data = thread_array
+	initialize right_data, merged_data as nullptr
 
-	left_ptr = 0
-	right_ptr = 0
-	merged_ptr = left
+	// tree_height refers to height of merge tree (starting from one sorted array for each thread at height 0 to one fully merged array at tree_height)
+	// at each height, adjacent (left and right) processes are merged together into the left process
+	while curr_height < tree_height:
+		if is_left_branch:
+			find corresponding right_branch thread id
+			
+			MPI_RECV data from right_branch process to right_data
+
+			merged_data = results of calling merge function on left_data and right_data
+
+			left_data = merged_data // since left branch is one that will continue working
+			double arr_size, handle memory updates, increment curr_height in preparation for next loop iteration
+
+		else: // in right branch
+			find corresponding left_branch thread id
+			
+			MPI_Send this process's data (currently held in left_data) to left_branch
+
+			handle memory, update curr_height to tree_height to break out of while loop 
+
+			// while loop terminates for right branches, number of active threads halves at each level of tree
+			
+	for root thread, set global_array equal to left_data (now holds final merged sorted array)
+
+main:
+	take in num_threads and num_vals (to sort) as input
+	set up MPI: MPI_Init, MPI_Comm_size, MPI_Comm_rank
+
+	block_size = num_vals / num_threads
+
+	in root thread, allocate values_array_global
+
+	call createData function in all threads to generate data to sort in parallel
+
+	MPI_Scatter from the values_array_global to values_array_thread (one per thread, each of length block size)
 	
-	// merging two subarrays back into the original in sorted order
-	while left_ptr < length(left_array) and right_ptr < length(right_array)		
-		if left_array[left_ptr] <= right_array[right_ptr]
-			array[merged_ptr] = left_array[left_ptr]
-			left_ptr += 1
-		else
-			array[merged_ptr] = left_array[right_ptr]
-			right_ptr += 1
-		merged_ptr += 1
+	call sequential_mergesort function on each thread, resulting in every thread having a sorted values_array_thread
 
-	while left_ptr < length(left_array)
-		array[merged_ptr] = left_array[left_ptr]
-		left_ptr += 1
-		merged_ptr += 1
+	call mergesort function on all threads, pass in log2(num_threads) as tree_height, block_size as arr_size
 
-	while right_ptr < length(right_array)
-		array[merged_ptr] = right_array[right_ptr]
-		right_ptr += 1
-		merged_ptr += 1	
-
-// merge sort function that recursively calls itself, initially called with left and right as the start and end indices of the array
-merge_sort(array, left, right):
-	if left >= right
-		return
-
-	mid = left + (right - left) / 2
-	merge_sort(array, left, mid)
-	merge_sort(array, mid + 1, right)
-	merge(array, begin, mid, end)
+	in root thread, call correctness_check function to ensure that values_array_global is sorted
 ```
-
-Merge sort lends itself well to parallelization since the different recursive calls at the same level work with different parts of the array, so they do not depend on each other (and won’t be written to/read from at the same time). To adapt this algorithm for use with MPI, different MPI processes would each be given a subarray to perform the merge sort algorithm on (using MPI_Scatter), ultimately resulting in an entirely sorted original array. When using CUDA, a similar process would occur using CUDA threads to execute merge sort in parallel on different subsections of the original array on a GPU.
 
 **Bitonic Sort Pseudo Code:**
 
