@@ -171,11 +171,14 @@ Runtimes will be recorded using Caliper regions (separating the timings for data
 **Status:**
 
 **Bubble Sort:**
-The MPI implmentation of bubble sort is complete, the CUDA implementation is not.
+The MPI implmentation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet.
 
 **Sample Sort:**
 
 **Merge Sort:**
 
 **Bitonic Sort:**
-The CUDA implementaiton of bitonic sort is complete, I have found code for the [MPI implemnetation]([url](https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html)https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html) but have not implemented it yet. 
+The CUDA implementaiton of bitonic sort is complete, I have found code for the [MPI implemnetation]([url](https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html)https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html) but have not implemented it yet.
+
+## Questions:
+* How important is it to generate data in parallel for CUDA? Since Lab 3 did not, we also did not for our CUDA implementation.
