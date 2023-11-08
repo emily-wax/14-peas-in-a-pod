@@ -174,6 +174,7 @@ Runtimes will be recorded using Caliper regions (separating the timings for data
 The MPI implementation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet.
 
 **Sample Sort:**
+The MPI implementation of sample sort is complete. Research has been done for the CUDA version but it has not been implemented yet.
 
 **Merge Sort:**
 The MPI implementation of merge sort is complete. I have found a [source]([url](https://pushkar2196.wordpress.com/2017/04/19/mergesort-cuda-implementation/#:~:text=GPUs%20are%20optimized%20for%20running,threads%20at%20the%20same%20time.&text=Merge%20Sort%20is%20a%20Divide,used%20for%20merging%20two%20halves.)) to adapt for the CUDA implementation, but have not implemented it yet.
