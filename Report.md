@@ -168,7 +168,7 @@ merge:
 Runtimes will be recorded using Caliper regions (separating the timings for data generation, computation, communication, and correctness checking).
 
 ## 3. Project implementation
-###Status:
+### Status:
 
 **Bubble Sort:**
 The MPI implmentation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet.
