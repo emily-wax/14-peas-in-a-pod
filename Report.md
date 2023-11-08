@@ -139,7 +139,8 @@ The code from our Lab 3 implementation will be used for bitonic sort.
 bitonic_sort:
 	for the length of the array:
 		sort first half ascending
-		sort second half descending
+		sort second half descendings
+		call merge on different directions with different threads
 		merge in the given direction
 merge:
 	for the length of the array:
