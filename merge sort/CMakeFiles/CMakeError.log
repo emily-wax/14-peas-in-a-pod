@@ -1,0 +1,102 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /scratch/user/hkumar/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_c8dc9/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_c8dc9.dir/build.make CMakeFiles/cmTC_c8dc9.dir/build
+gmake[1]: Entering directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c8dc9.dir/CheckSymbolExists.c.o
+/sw/eb/sw/GCCcore/7.3.0/bin/cc    -o CMakeFiles/cmTC_c8dc9.dir/CheckSymbolExists.c.o   -c /scratch/user/hkumar/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_c8dc9
+/sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c8dc9.dir/link.txt --verbose=1
+/sw/eb/sw/GCCcore/7.3.0/bin/cc      CMakeFiles/cmTC_c8dc9.dir/CheckSymbolExists.c.o  -o cmTC_c8dc9 
+CMakeFiles/cmTC_c8dc9.dir/CheckSymbolExists.c.o:CheckSymbolExists.c:function main: error: undefined reference to 'pthread_create'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [cmTC_c8dc9] Error 1
+gmake[1]: Leaving directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+gmake: *** [cmTC_c8dc9/fast] Error 2
+
+File /scratch/user/hkumar/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /scratch/user/hkumar/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_f3af2/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_f3af2.dir/build.make CMakeFiles/cmTC_f3af2.dir/build
+gmake[1]: Entering directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f3af2.dir/CheckFunctionExists.c.o
+/sw/eb/sw/GCCcore/7.3.0/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_f3af2.dir/CheckFunctionExists.c.o   -c /sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/share/cmake-3.12/Modules/CheckFunctionExists.c
+Linking C executable cmTC_f3af2
+/sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f3af2.dir/link.txt --verbose=1
+/sw/eb/sw/GCCcore/7.3.0/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_f3af2.dir/CheckFunctionExists.c.o  -o cmTC_f3af2 -lpthreads 
+/usr/bin/ld.gold: error: cannot find -lpthreads
+CMakeFiles/cmTC_f3af2.dir/CheckFunctionExists.c.o:CheckFunctionExists.c:function main: error: undefined reference to 'pthread_create'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [cmTC_f3af2] Error 1
+gmake[1]: Leaving directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+gmake: *** [cmTC_f3af2/fast] Error 2
+
+
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /scratch/user/hkumar/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_bb59c/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_bb59c.dir/build.make CMakeFiles/cmTC_bb59c.dir/build
+gmake[1]: Entering directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_bb59c.dir/CheckSymbolExists.cxx.o
+/sw/eb/sw/GCCcore/7.3.0/bin/c++     -o CMakeFiles/cmTC_bb59c.dir/CheckSymbolExists.cxx.o -c /scratch/user/hkumar/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_bb59c
+/sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bb59c.dir/link.txt --verbose=1
+/sw/eb/sw/GCCcore/7.3.0/bin/c++       CMakeFiles/cmTC_bb59c.dir/CheckSymbolExists.cxx.o  -o cmTC_bb59c 
+CMakeFiles/cmTC_bb59c.dir/CheckSymbolExists.cxx.o:CheckSymbolExists.cxx:function main: error: undefined reference to 'pthread_create'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [cmTC_bb59c] Error 1
+gmake[1]: Leaving directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+gmake: *** [cmTC_bb59c/fast] Error 2
+
+File /scratch/user/hkumar/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /scratch/user/hkumar/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_d8d8f/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_d8d8f.dir/build.make CMakeFiles/cmTC_d8d8f.dir/build
+gmake[1]: Entering directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_d8d8f.dir/CheckFunctionExists.cxx.o
+/sw/eb/sw/GCCcore/7.3.0/bin/c++    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_d8d8f.dir/CheckFunctionExists.cxx.o -c /scratch/user/hkumar/CMakeFiles/CheckLibraryExists/CheckFunctionExists.cxx
+Linking CXX executable cmTC_d8d8f
+/sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d8d8f.dir/link.txt --verbose=1
+/sw/eb/sw/GCCcore/7.3.0/bin/c++   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_d8d8f.dir/CheckFunctionExists.cxx.o  -o cmTC_d8d8f -lpthreads 
+/usr/bin/ld.gold: error: cannot find -lpthreads
+CMakeFiles/cmTC_d8d8f.dir/CheckFunctionExists.cxx.o:CheckFunctionExists.cxx:function main: error: undefined reference to 'pthread_create'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [cmTC_d8d8f] Error 1
+gmake[1]: Leaving directory `/scratch/user/hkumar/CMakeFiles/CMakeTmp'
+gmake: *** [cmTC_d8d8f/fast] Error 2
+
+
