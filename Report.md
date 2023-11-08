@@ -133,6 +133,20 @@ main:
 ```
 
 **Bitonic Sort Pseudo Code:**
+The code from our Lab 3 implementation will be used for bitonic sort.
+
+```
+bitonic_sort:
+	for the length of the array:
+		sort first half ascending
+		sort second half descending
+		merge in the given direction
+merge:
+	for the length of the array:
+		swap arr[i] and arr[i+n/2] if in wrong order for direction
+	merge first half, recursive
+	merge second half, recursive
+```
 
 **References:** 
 - https://www.geeksforgeeks.org/merge-sort/
