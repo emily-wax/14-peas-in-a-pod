@@ -79,8 +79,6 @@ for i from 2 to n-2 with step 2:
 11. Check if sorted
 ```
 
-MPI Calls used
-
 **Merge Sort Pseudo Code:**
 
 ```
