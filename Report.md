@@ -169,7 +169,7 @@ Runtimes will be recorded using Caliper regions (separating the timings for data
 ### Status:
 
 **Bubble Sort:**
-The MPI implementation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet.
+The MPI implementation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet. There will not be a .cali file for bubble sort at this time due to a mistake on my part (Roee Belkin), and the downtime of the grace cluster. It is however fully functional and will be added immediately after the cluster is restored. 
 
 **Sample Sort:**
 The MPI implementation of sample sort is complete. Research has been done for the CUDA version but it has not been implemented yet.
