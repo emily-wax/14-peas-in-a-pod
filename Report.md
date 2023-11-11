@@ -1,5 +1,5 @@
 # CSCE 435 Group project
-
+## 0. Group number: 14
 ## 1. Group members:
 1. Roee Belkin
 2. Harini Kumar
@@ -13,11 +13,11 @@ Our team will be using a slack group chat to communicate. Seeing as we all alrea
 
 ## 3. _due 10/25_ Project topic
 
-We will implement 3 parallel sorting algorithms (bubble, quick, and merge sort) in MPI and CUDA. We will examine and compare their performance in detail (computation time, communication time, how much data is sent) on a variety of inputs: sorted, random, reverse, sorted with 1% perturbed, etc.  Strong scaling, weak scaling, GPU performance.
+We will implement 3 parallel sorting algorithms (bubble, sample, and merge sort) in MPI and CUDA. We will examine and compare their performance in detail (computation time, communication time, how much data is sent) on a variety of inputs: sorted, random, reverse, sorted with 1% perturbed, etc.  Strong scaling, weak scaling, GPU performance.
 
 ## 4. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 - Bubble Sort (MPI + CUDA)
-- Quick Sort (MPI + OpenMP)
+- Sample Sort (MPI)
 - Merge Sort (MPI)
 - Bitonic Sort (CUDA)
 
@@ -63,71 +63,91 @@ for i from 2 to n-2 with step 2:
 11. Finalize MPI.
 ```
 
-**Quick Sort Pseudo Code:**
+**Sample Sort Pseudo Code:**
 ```
-1. choose a pivot from the unsorted array
-2. give each process an even slice of the unsorted array
-3. broadcast the pivot out to each process 
-4. in each process:
-	-Quicksort step: the process's array will be sorted into left <= pivot <= right (happening in parallel)
-	-recursively calls quicksort until done
-	-lower half of processes send "higher list" to the higher half of processes and vice versa
-6. Processes divide into chunks again and the algorithm (step 4) repeats
-7. After Log P(num processes) recursions each process i will have lower values than process i+1
-8. Sequential quicksort ensues for each process.
-
-Using MPI_Send & Recv as well as Collective Communication (to broadcast the pivot) and create groups of processes.
-Number of threads is to be taken in as a variable as well as number of elements in the array.
-
+1. Set up MPi Threads/Generate Data
+2. Choose (p-1) local splitters in each process (evenly separated)
+3. Gather all local splitters into root function (global splitters list) (MPI_Gather)
+4. Sort new "global splitters" list
+5. Narrow down to p-1 global splitters (evenly separated)
+6. Broadcast global splitters to all processes (MPI_Bcast)
+7. Perform bucket sort in each process using global splitters as indices - use one vector per bucket
+8. Each process sends buckets to other processes (based on bucket indices) (MPI_Send)
+9. Each process receives values in its bucket from other processes (MPI_Recv & MPI_Get_Count)
+	a. receive values into "final bucket" vector, using MPI_Get_Count to size appropriately
+10. Local sort is performed on each process
+11. Check if sorted
 ```
+
+MPI Calls used
 
 **Merge Sort Pseudo Code:**
 
 ```
-// merge helper function takes in an array along with left, middle, and right indices
-merge(array, left, mid, right):
-	// copying from the original array to two new temporary subarrays
-  	left_array = array[left to mid]
-	right_array = array[mid + 1 to right]	
+mergesort(tree_height, thread_id, thread_array, arr_size, global_array):
+	curr_height = 0
+	left_data = thread_array
+	initialize right_data, merged_data as nullptr
 
-	left_ptr = 0
-	right_ptr = 0
-	merged_ptr = left
+	// tree_height refers to height of merge tree (starting from one sorted array for each thread at height 0 to one fully merged array at tree_height)
+	// at each height, adjacent (left and right) processes are merged together into the left process
+	while curr_height < tree_height:
+		if is_left_branch:
+			find corresponding right_branch thread id
+			
+			MPI_RECV data from right_branch process to right_data
+
+			merged_data = results of calling merge function on left_data and right_data
+
+			left_data = merged_data // since left branch is one that will continue working
+			double arr_size, handle memory updates, increment curr_height in preparation for next loop iteration
+
+		else: // in right branch
+			find corresponding left_branch thread id
+			
+			MPI_Send this process's data (currently held in left_data) to left_branch
+
+			handle memory, update curr_height to tree_height to break out of while loop 
+
+			// while loop terminates for right branches, number of active threads halves at each level of tree
+			
+	for root thread, set global_array equal to left_data (now holds final merged sorted array)
+
+main:
+	take in num_threads and num_vals (to sort) as input
+	set up MPI: MPI_Init, MPI_Comm_size, MPI_Comm_rank
+
+	block_size = num_vals / num_threads
+
+	in root thread, allocate values_array_global
+
+	call createData function in all threads to generate data to sort in parallel
+
+	MPI_Scatter from the values_array_global to values_array_thread (one per thread, each of length block size)
 	
-	// merging two subarrays back into the original in sorted order
-	while left_ptr < length(left_array) and right_ptr < length(right_array)		
-		if left_array[left_ptr] <= right_array[right_ptr]
-			array[merged_ptr] = left_array[left_ptr]
-			left_ptr += 1
-		else
-			array[merged_ptr] = left_array[right_ptr]
-			right_ptr += 1
-		merged_ptr += 1
+	call sequential_mergesort function on each thread, resulting in every thread having a sorted values_array_thread
 
-	while left_ptr < length(left_array)
-		array[merged_ptr] = left_array[left_ptr]
-		left_ptr += 1
-		merged_ptr += 1
+	call mergesort function on all threads, pass in log2(num_threads) as tree_height, block_size as arr_size
 
-	while right_ptr < length(right_array)
-		array[merged_ptr] = right_array[right_ptr]
-		right_ptr += 1
-		merged_ptr += 1	
-
-// merge sort function that recursively calls itself, initially called with left and right as the start and end indices of the array
-merge_sort(array, left, right):
-	if left >= right
-		return
-
-	mid = left + (right - left) / 2
-	merge_sort(array, left, mid)
-	merge_sort(array, mid + 1, right)
-	merge(array, begin, mid, end)
+	in root thread, call correctness_check function to ensure that values_array_global is sorted
 ```
 
-Merge sort lends itself well to parallelization since the different recursive calls at the same level work with different parts of the array, so they do not depend on each other (and won’t be written to/read from at the same time). To adapt this algorithm for use with MPI, different MPI processes would each be given a subarray to perform the merge sort algorithm on (using MPI_Scatter), ultimately resulting in an entirely sorted original array. When using CUDA, a similar process would occur using CUDA threads to execute merge sort in parallel on different subsections of the original array on a GPU.
-
 **Bitonic Sort Pseudo Code:**
+The code from our Lab 3 implementation will be used for bitonic sort.
+
+```
+bitonic_sort:
+	for the length of the array:
+		sort first half ascending
+		sort second half descendings
+		call merge on different directions with different threads
+		merge in the given direction
+merge:
+	for the length of the array:
+		swap arr[i] and arr[i+n/2] if in wrong order for direction
+	merge first half, recursive
+	merge second half, recursive
+```
 
 **References:** 
 - https://www.geeksforgeeks.org/merge-sort/
@@ -136,8 +156,153 @@ Merge sort lends itself well to parallelization since the different recursive ca
 - http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
 
 ## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
-
-For example:
-- Effective use of a GPU (play with problem size and number of threads)
 - Strong scaling to more nodes (same problem size, increase number of processors)
-- Weak scaling (increase problem size, increase number of processors)
+    - For each algorithm and each problem size, graph average runtime (across input types) vs number of threads
+    - Multiple lines per graph representing timings for different sections (computation time, communication time, etc.)
+    - Identify and compare at which point adding more threads does not result in further speedup for each algorithm and problem size
+- Compare sorting algorithms’ parallel performance on different input types (sorted, random, reverse, sorted with 1% perturbed)
+    - Bar graph comparing overall runtimes for each input type for the largest chosen problem size
+    - Identify which input type(s) each algorithm performs best on
+    - Compare overall parallel performance across algorithms using MPI/CUDA
+ 
+Runtimes will be recorded using Caliper regions (separating the timings for data generation, computation, communication, and correctness checking).
+
+## 3. Project implementation
+Implement your proposed algorithms, and test them starting on a small scale.
+Instrument your code, and turn in at least one Caliper file per algorithm;
+if you have implemented an MPI and a CUDA version of your algorithm,
+turn in a Caliper file for each.
+
+### 3a. Caliper instrumentation
+Please use the caliper build `/scratch/group/csce435-f23/Caliper/caliper/share/cmake/caliper` 
+(same as lab1 build.sh) to collect caliper files for each experiment you run.
+
+Your Caliper regions should resemble the following calltree
+(use `Thicket.tree()` to see the calltree collected on your runs):
+```
+main
+|_ data_init
+|_ comm
+|    |_ MPI_Barrier
+|    |_ comm_small  // When you broadcast just a few elements, such as splitters in Sample sort
+|    |   |_ MPI_Bcast
+|    |   |_ MPI_Send
+|    |   |_ cudaMemcpy
+|    |_ comm_large  // When you send all of the data the process has
+|        |_ MPI_Send
+|        |_ MPI_Bcast
+|        |_ cudaMemcpy
+|_ comp
+|    |_ comp_small  // When you perform the computation on a small number of elements, such as sorting the splitters in Sample sort
+|    |_ comp_large  // When you perform the computation on all of the data the process has, such as sorting all local elements
+|_ correctness_check
+```
+
+Required code regions:
+- `main` - top-level main function.
+    - `data_init` - the function where input data is generated or read in from file.
+    - `correctness_check` - function for checking the correctness of the algorithm output (e.g., checking if the resulting data is sorted).
+    - `comm` - All communication-related functions in your algorithm should be nested under the `comm` region.
+      - Inside the `comm` region, you should create regions to indicate how much data you are communicating (i.e., `comm_small` if you are sending or broadcasting a few values, `comm_large` if you are sending all of your local values).
+      - Notice that auxillary functions like MPI_init are not under here.
+    - `comp` - All computation functions within your algorithm should be nested under the `comp` region.
+      - Inside the `comp` region, you should create regions to indicate how much data you are computing on (i.e., `comp_small` if you are sorting a few values like the splitters, `comp_large` if you are sorting values in the array).
+      - Notice that auxillary functions like data_init are not under here.
+
+All functions will be called from `main` and most will be grouped under either `comm` or `comp` regions, representing communication and computation, respectively. You should be timing as many significant functions in your code as possible. **Do not** time print statements or other insignificant operations that may skew the performance measurements.
+
+**Nesting Code Regions** - all computation code regions should be nested in the "comp" parent code region as following:
+```
+CALI_MARK_BEGIN("comp");
+CALI_MARK_BEGIN("comp_large");
+mergesort();
+CALI_MARK_END("comp_large");
+CALI_MARK_END("comp");
+```
+
+**Looped GPU kernels** - to time GPU kernels in a loop:
+```
+### Bitonic sort example.
+int count = 1;
+CALI_MARK_BEGIN("comp");
+CALI_MARK_BEGIN("comp_large");
+int j, k;
+/* Major step */
+for (k = 2; k <= NUM_VALS; k <<= 1) {
+    /* Minor step */
+    for (j=k>>1; j>0; j=j>>1) {
+        bitonic_sort_step<<<blocks, threads>>>(dev_values, j, k);
+        count++;
+    }
+}
+CALI_MARK_END("comp_large");
+CALI_MARK_END("comp");
+```
+
+**Calltree Examples**:
+
+```
+# Bitonic sort tree - CUDA looped kernel
+1.000 main
+├─ 1.000 comm
+│  └─ 1.000 comm_large
+│     └─ 1.000 cudaMemcpy
+├─ 1.000 comp
+│  └─ 1.000 comp_large
+└─ 1.000 data_init
+```
+
+```
+# Matrix multiplication example - MPI
+1.000 main
+├─ 1.000 comm
+│  ├─ 1.000 MPI_Barrier
+│  ├─ 1.000 comm_large
+│  │  ├─ 1.000 MPI_Recv
+│  │  └─ 1.000 MPI_Send
+│  └─ 1.000 comm_small
+│     ├─ 1.000 MPI_Recv
+│     └─ 1.000 MPI_Send
+├─ 1.000 comp
+│  └─ 1.000 comp_large
+└─ 1.000 data_init
+```
+
+```
+# Mergesort - MPI
+1.000 main
+├─ 1.000 comm
+│  ├─ 1.000 MPI_Barrier
+│  └─ 1.000 comm_large
+│     ├─ 1.000 MPI_Gather
+│     └─ 1.000 MPI_Scatter
+├─ 1.000 comp
+│  └─ 1.000 comp_large
+└─ 1.000 data_init
+```
+
+#### 3b. Collect Metadata
+
+Have the following `adiak` code in your programs to collect metadata:
+```
+adiak::init(NULL);
+adiak::launchdate();    // launch date of the job
+adiak::libraries();     // Libraries used
+adiak::cmdline();       // Command line used to launch the job
+adiak::clustername();   // Name of the cluster
+adiak::value("Algorithm", algorithm); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+adiak::value("ProgrammingModel", programmingModel); // e.g., "MPI", "CUDA", "MPIwithCUDA"
+adiak::value("Datatype", datatype); // The datatype of input elements (e.g., double, int, float)
+adiak::value("SizeOfDatatype", sizeOfDatatype); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+adiak::value("InputSize", inputSize); // The number of elements in input dataset (1000)
+adiak::value("InputType", inputType); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+adiak::value("num_procs", num_procs); // The number of processors (MPI ranks)
+adiak::value("num_threads", num_threads); // The number of CUDA or OpenMP threads
+adiak::value("num_blocks", num_blocks); // The number of CUDA blocks 
+adiak::value("group_num", group_number); // The number of your group (integer, e.g., 1, 10)
+adiak::value("implementation_source", implementation_source) // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+```
+
+They will show up in the `Thicket.metadata` if the caliper file is read into Thicket.
+
+**See the `Builds/` directory to find the correct Caliper configurations to get the above metrics for CUDA, MPI, or OpenMP programs.** They will show up in the `Thicket.dataframe` when the Caliper file is read into Thicket.
