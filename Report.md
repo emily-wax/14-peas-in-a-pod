@@ -169,7 +169,8 @@ Runtimes will be recorded using Caliper regions (separating the timings for data
 ### Status:
 
 **Bubble Sort:**
-The MPI implementation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet. There will not be a .cali file for bubble sort at this time due to a mistake on my part (Roee Belkin), and the downtime of the grace cluster. It is however fully functional and will be added immediately after the cluster is restored. 
+The MPI implementation of bubble sort is complete, I have sources for the CUDA implementation in a couple different ways but have not implemented it yet. There will not be a .cali file for bubble sort at this time due to a mistake on my part (Roee Belkin), and the downtime of the Frace cluster. It is however fully functional and will be added immediately after the cluster is restored. 
+https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu
 
 **Sample Sort:**
 The MPI implementation of sample sort is complete. Research has been done for the CUDA version but it has not been implemented yet.
@@ -178,7 +179,8 @@ The MPI implementation of sample sort is complete. Research has been done for th
 The MPI implementation of merge sort is complete. I have found a [source]([url](https://pushkar2196.wordpress.com/2017/04/19/mergesort-cuda-implementation/#:~:text=GPUs%20are%20optimized%20for%20running,threads%20at%20the%20same%20time.&text=Merge%20Sort%20is%20a%20Divide,used%20for%20merging%20two%20halves.)) to adapt for the CUDA implementation, but have not implemented it yet.
 
 **Bitonic Sort:**
-The CUDA implementation of bitonic sort is complete, I have found code for the [MPI implementation]([url](https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html)https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html) but have not implemented it yet.
+The CUDA implementation of bitonic sort is complete, I have found code for the but have not implemented it yet.
+https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html
 
 ## Questions:
 * How important is it to generate data in parallel for CUDA? Since Lab 3 did not, we also did not for our CUDA implementation.
