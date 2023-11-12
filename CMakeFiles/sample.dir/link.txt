@@ -1,0 +1,1 @@
+/sw/eb/sw/GCCcore/7.3.0/bin/g++  CMakeFiles/sample.dir/sample_sort.cu.o CMakeFiles/sample.dir/cmake_device_link.o -o sample  -L"/sw/eb/sw/CUDA/9.2.88/lib64/stubs" -L"/sw/eb/sw/CUDA/9.2.88/lib64" -lcudadevrt -lcudart_static -lrt -lpthread -ldl

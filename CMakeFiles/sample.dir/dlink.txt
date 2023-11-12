@@ -1,0 +1,1 @@
+/sw/eb/sw/CUDA/9.2.88/bin/nvcc   -Xcompiler=-fPIC -Wno-deprecated-gpu-targets -shared -dlink CMakeFiles/sample.dir/sample_sort.cu.o -o CMakeFiles/sample.dir/cmake_device_link.o 

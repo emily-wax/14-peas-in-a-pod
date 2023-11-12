@@ -34,10 +34,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /sw/eb/sw/CMake/3.12.1/bin/cmake
+CMAKE_COMMAND = /sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/bin/cmake
 
 # The command to remove a file.
-RM = /sw/eb/sw/CMake/3.12.1/bin/cmake -E remove -f
+RM = /sw/eb/sw/CMake/3.12.1-GCCcore-7.3.0/bin/cmake -E remove -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -79,7 +79,7 @@ sample_sort_EXTERNAL_OBJECTS =
 
 sample_sort: CMakeFiles/sample_sort.dir/sample_sort.cpp.o
 sample_sort: CMakeFiles/sample_sort.dir/build.make
-sample_sort: /scratch/group/csce435-f23/Caliper-MPI/caliper/lib64/libcaliper.so.2.10.0
+sample_sort: /scratch/group/csce435-f23/Caliper/caliper/lib64/libcaliper.so.2.11.0-dev
 sample_sort: /sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/lib/libmpicxx.so
 sample_sort: /sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/lib/release/libmpi.so
 sample_sort: /lib64/librt.so

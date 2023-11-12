@@ -27,15 +27,15 @@ int num_procs;
 int proc_id;
 
 /* Define Caliper Region Names*/
-const char* main_cali = "main"; //TODO
+const char* main_cali = "main"; 
 const char* data_init = "data_init";
 const char* correctness_check = "correctness_check"; 
-const char* comm = "comm"; //TODO
-const char* comm_small = "comm_small"; //TODO
-const char* comm_large = "comm_large"; //TODO
+const char* comm = "comm"; 
+const char* comm_small = "comm_small"; 
+const char* comm_large = "comm_large"; 
 const char* comp = "comp";
-const char* comp_small = "comp_small"; //TODO
-const char* comp_large = "comp_large"; //TODO
+const char* comp_small = "comp_small"; 
+const char* comp_large = "comp_large"; 
 
 enum sort_type{
     SORTED,
