@@ -163,6 +163,10 @@ stdio.h
 -
 time.h
 -
+thrust/device_vector.h
+-
+thrust/sort.h
+-
 caliper/cali.h
 -
 caliper/cali-manager.h
