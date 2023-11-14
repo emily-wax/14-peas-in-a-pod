@@ -163,6 +163,14 @@ int main(int argc, char *argv[]){
   array_print(all_splitters, (THREADS - 1) * THREADS);
   array_print(global_splitters, THREADS - 1);
 
+  // have a function that calculates the offsets (determines starting point for each bucket)
+
+  // run prefix sum to calculate starting point
+
+  // distribute data (use atomic add with size of buckets until offset and size match)
+
+  // use the offsets and size to accurately place into sorted data
+
 
   /* free device memory */
   cudaFree(dev_splitters);
