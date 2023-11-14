@@ -80,7 +80,6 @@ for i from 2 to n-2 with step 2:
 ```
 
 **Merge Sort Pseudo Code:**
-
 ```
 mergesort(tree_height, thread_id, thread_array, arr_size, global_array):
 	curr_height = 0
@@ -129,6 +128,7 @@ main:
 
 	in root thread, call correctness_check function to ensure that values_array_global is sorted
 ```
+Adapted from http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
 
 **Bitonic Sort Pseudo Code:**
 The code from our Lab 3 implementation will be used for bitonic sort.
@@ -176,7 +176,8 @@ https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu
 The MPI implementation of sample sort is complete. Research has been done for the CUDA version but it has not been implemented yet.
 
 **Merge Sort:**
-The MPI implementation of merge sort is complete. I have found a [source]([url](https://pushkar2196.wordpress.com/2017/04/19/mergesort-cuda-implementation/#:~:text=GPUs%20are%20optimized%20for%20running,threads%20at%20the%20same%20time.&text=Merge%20Sort%20is%20a%20Divide,used%20for%20merging%20two%20halves.)) to adapt for the CUDA implementation, but have not implemented it yet.
+The MPI implementation of merge sort is complete. I have found a source to adapt for the CUDA implementation, but have not implemented it yet.
+https://github.com/kevin-albert/cuda-mergesort/blob/master/mergesort.cu
 
 **Bitonic Sort:**
 The CUDA implementation of bitonic sort is complete, I have found code for the but have not implemented it yet.
