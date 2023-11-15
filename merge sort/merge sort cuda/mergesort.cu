@@ -97,7 +97,7 @@ __device__ void gpu_merge(int *source, int *dest, int start, int middle, int end
 {
     int left_ptr = start;
     int right_ptr = middle;
-    for (int merge_ptr = start; merge_ptr < end; k++)
+    for (int merge_ptr = start; merge_ptr < end; merge_ptr++)
     {
         if (left_ptr < middle && (right_ptr >= end || source[left_ptr] < source[right_ptr]))
         {
