@@ -198,11 +198,8 @@ https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html
 
 
 **Bitonic Sort:**
-The CUDA implementation is complete and all cali files are generated for all input sizes on 512 and 1024 threads over all 4 sorts. The MPI implementation proved to be difficult - I had found code online and expected those sources to be adequate to be able to analyze and compare sorting across different parallelization strategies, however these implementations did not work as expected and paired with a only a basic understanding of how the implementation in CUDA was achieved, it was hard to debug or create MPI code for bitonic sort. I decided to focus on having a good implementation and analysis of bitonic sort in CUDA before doing MPI, so MPI is not implemented.
-
-## Questions:
-* 
+The CUDA implementation is complete and all cali files are generated for all input sizes on 512 and 1024 threads over all 4 sorts. The MPI implementation proved to be difficult - I had found code online and expected those sources to be adequate to be able to analyze and compare sorting across different parallelization strategies, however these implementations did not work as expected and paired with a only a basic understanding of how the implementation in CUDA was achieved, it was hard to debug or create MPI code for bitonic sort. I decided to focus on having a good implementation and analysis of bitonic sort in CUDA before doing MPI, so MPI is not implemented. 
 
 ### Graphs:
 
-
+## Questions:
