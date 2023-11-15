@@ -1,10 +1,10 @@
 /******************************************************************************
-* FILE: mergesort.cpp
-* DESCRIPTION:  
-*   Parallelized merge sort algorithm using MPI
-* AUTHOR: Harini Kumar
-* LAST REVISED: 11/05/23
-******************************************************************************/
+ * FILE: mergesort.cpp
+ * DESCRIPTION:
+ *   Parallelized merge sort algorithm using MPI
+ * AUTHOR: Harini Kumar
+ * LAST REVISED: 11/05/23
+ ******************************************************************************/
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +126,7 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
 
     if (thread_id == 0)
     {
-        printArray(values_array, NUM_VALS);
+        // printArray(values_array, NUM_VALS);
     }
 }
 
@@ -352,7 +352,7 @@ int main(int argc, char **argv)
 
     if (thread_id == 0)
     {
-        printArray(values_array_global, NUM_VALS);
+        // printArray(values_array_global, NUM_VALS);
         CALI_MARK_BEGIN("correctness_check");
         cout << "Sorted?: " << is_sorted(values_array_global, NUM_VALS) << endl;
         CALI_MARK_END("correctness_check");

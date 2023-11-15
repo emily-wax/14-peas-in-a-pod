@@ -3,7 +3,7 @@
  * DESCRIPTION:
  *   Parallelized merge sort algorithm using CUDA
  * AUTHOR: Harini Kumar
- * LAST REVISED: 11/12/23
+ * LAST REVISED: 11/15/23
  ******************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,203 +13,194 @@
 #include <adiak.hpp>
 #include <cuda_runtime.h>
 #include <cuda.h>
-#include <bits/stdc++.h>
+#include <iostream>
+
+using namespace std;
 
 int THREADS;
 int BLOCKS;
 int NUM_VALS;
 
-const char *bitonic_sort_step_region = "bitonic_sort_step";
-const char *cudaMemcpy_host_to_device = "cudaMemcpy_host_to_device";
-const char *cudaMemcpy_device_to_host = "cudaMemcpy_device_to_host";
-
-int kernel_calls = 0;
-float effective_bandwidth_gb_s;
-float bitonic_sort_step_time;
-float cudaMemcpy_host_to_device_time;
-float cudaMemcpy_device_to_host_time;
-
-void print_elapsed(clock_t start, clock_t stop)
+enum sort_type
 {
-    double elapsed = ((double)(stop - start)) / CLOCKS_PER_SEC;
-    printf("Elapsed time: %.3fs\n", elapsed);
+    SORTED,
+    REVERSE_SORTED,
+    PERTURBED,
+    RANDOM
+};
+
+void printArray(int *values, int num_values)
+{
+    cout << "\nArray is: \n";
+    for (int i = 0; i < num_values; i++)
+    {
+        cout << values[i] << ", ";
+    }
+
+    cout << endl;
 }
 
-float random_float()
-{
-    return (float)rand() / (float)RAND_MAX;
-}
-
-void array_print(float *arr, int length)
+void fillArray(int *arr, int length, int sort_type)
 {
     int i;
-    for (i = 0; i < length; ++i)
+    if (sort_type == RANDOM)
     {
-        printf("%1.3f ", arr[i]);
-    }
-    printf("\n");
-}
-
-void array_fill(float *arr, int length)
-{
-    srand(time(NULL));
-    int i;
-    for (i = 0; i < length; ++i)
-    {
-        arr[i] = random_float();
-    }
-}
-
-__global__ void bitonic_sort_step(float *dev_values, int j, int k)
-{
-    unsigned int i, ixj; /* Sorting partners: i and ixj */
-    i = threadIdx.x + blockDim.x * blockIdx.x;
-    ixj = i ^ j;
-
-    /* The threads with the lowest ids sort the array. */
-    if ((ixj) > i)
-    {
-        if ((i & k) == 0)
+        for (i = 0; i < length; ++i)
         {
-            /* Sort ascending */
-            if (dev_values[i] > dev_values[ixj])
-            {
-                /* exchange(i,ixj); */
-                float temp = dev_values[i];
-                dev_values[i] = dev_values[ixj];
-                dev_values[ixj] = temp;
-            }
+            arr[i] = rand() % (INT_MAX);
         }
-        if ((i & k) != 0)
+    }
+    else if (sort_type == SORTED)
+    {
+        for (i = 0; i < length; i++)
         {
-            /* Sort descending */
-            if (dev_values[i] < dev_values[ixj])
+            arr[i] = i;
+        }
+    }
+    else if (sort_type == PERTURBED)
+    {
+        for (i = 0; i < length; i++)
+        {
+            arr[i] = i;
+            int temp = rand() % 100;
+            if (temp == 1)
             {
-                /* exchange(i,ixj); */
-                float temp = dev_values[i];
-                dev_values[i] = dev_values[ixj];
-                dev_values[ixj] = temp;
+                arr[i] = rand() % length;
             }
         }
     }
-}
-
-/**
- * Inplace bitonic sort using CUDA.
- */
-void bitonic_sort(float *values)
-{
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    float *dev_values;
-    size_t size = NUM_VALS * sizeof(float);
-
-    cudaMalloc((void **)&dev_values, size);
-
-    // MEM COPY FROM HOST TO DEVICE
-    CALI_MARK_BEGIN(cudaMemcpy_host_to_device);
-    cudaEventRecord(start);
-    cudaMemcpy(dev_values, values, size, cudaMemcpyHostToDevice);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&cudaMemcpy_host_to_device_time, start, stop);
-    CALI_MARK_END(cudaMemcpy_host_to_device);
-
-    dim3 blocks(BLOCKS, 1);   /* Number of blocks   */
-    dim3 threads(THREADS, 1); /* Number of threads  */
-
-    int j, k;
-    CALI_MARK_BEGIN(bitonic_sort_step_region);
-    cudaEventRecord(start);
-    /* Major step */
-    for (k = 2; k <= NUM_VALS; k <<= 1)
+    else if (sort_type == REVERSE_SORTED)
     {
-        /* Minor step */
-        for (j = k >> 1; j > 0; j = j >> 1)
+        for (i = 0; i < length; i++)
         {
-            kernel_calls += 1;
-            bitonic_sort_step<<<blocks, threads>>>(dev_values, j, k);
+            arr[i] = length - i - 1;
         }
     }
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&bitonic_sort_step_time, start, stop);
-    CALI_MARK_END(bitonic_sort_step_region);
+}
 
-    // MEM COPY FROM DEVICE TO HOST
-    CALI_MARK_BEGIN(cudaMemcpy_device_to_host);
-    cudaEventRecord(start);
-    cudaMemcpy(values, dev_values, size, cudaMemcpyDeviceToHost);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&cudaMemcpy_device_to_host_time, start, stop);
-    CALI_MARK_END(cudaMemcpy_device_to_host);
+bool is_sorted(int *arr, int arr_size)
+{
+    for (int i = 1; i < arr_size; i++)
+    {
+        if (arr[i] < arr[i - 1])
+        {
+            return false;
+        }
+    }
 
-    cudaFree(dev_values);
+    return true;
+}
 
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+// called for each slice, merges source left array starting at start and right array starting at middle
+// results stored in dest, slice indices maintained
+__device__ void gpu_merge(int *source, int *dest, int start, int middle, int end)
+{
+    int left_ptr = start;
+    int right_ptr = middle;
+    for (int merge_ptr = start; merge_ptr < end; k++)
+    {
+        if (left_ptr < middle && (right_ptr >= end || source[left_ptr] < source[right_ptr]))
+        {
+            dest[merge_ptr] = source[left_ptr];
+            left_ptr++;
+        }
+        else
+        {
+            dest[merge_ptr] = source[right_ptr];
+            right_ptr++;
+        }
+    }
+}
+
+// mergesort for the slice given to device
+__global__ void gpu_mergesort(int *source, int *dest, int size, int width, int slices, dim3 *threads, dim3 *blocks)
+{
+    int idx = threadIdx.x + blockDim.x * blockIdx.x; // calculate unique index across threads and blocks
+    int start = width * idx * slices;                // used to index into array
+    int middle;
+    int end;
+
+    for (int slice = 0; slice < slices; slice++)
+    {
+        if (start >= size)
+            break;
+
+        middle = min(start + (width >> 1), size);
+        end = min(start + width, size);
+        gpu_merge(source, dest, start, middle, end);
+        start += width;
+    }
+}
+
+// called by host/main
+void mergesort(int *data, int size)
+{
+
+    // will switch btwn following two arrays when merging (one holds most updated merged, one holds not)
+    int *d_data;
+    int *d_swp;
+
+    dim3 *d_threads;
+    dim3 *d_blocks;
+
+    dim3 blocks(BLOCKS, 1);   // number of blocks
+    dim3 threads(THREADS, 1); // number of threads
+
+    // allocate two arrays that are size of og input array and copy input into one
+    cudaMalloc((void **)&d_data, size * sizeof(int));
+    cudaMalloc((void **)&d_swp, size * sizeof(int));
+
+    cudaMemcpy(d_data, data, size * sizeof(int), cudaMemcpyHostToDevice);
+
+    // allocate memory to send thread/block dims to devices
+    cudaMalloc((void **)&d_threads, sizeof(dim3));
+    cudaMalloc((void **)&d_blocks, sizeof(dim3));
+
+    cudaMemcpy(d_threads, &threads, sizeof(dim3), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_blocks, &blocks, sizeof(dim3), cudaMemcpyHostToDevice);
+
+    // used to point to two arrays to make swapping easier
+    int *A = d_data;
+    int *B = d_swp;
+
+    int nThreads = NUM_VALS; // threads * blocks
+
+    // similar to mpi merge, slices start small and grow in size as you progress through merge tree
+    for (int width = 2; width < (size * 2); width *= 2) // slice width multiplied by 2 each time, ends when width is og input size
+    {
+        int slices = size / ((nThreads)*width) + 1;
+
+        gpu_mergesort<<<blocks, threads>>>(A, B, size, width, slices, d_threads, d_blocks);
+
+        // swap A and B each time following gpu_mergesort to correctly track which is most updated merged
+        A = A == d_data ? d_swp : d_data;
+        B = B == d_data ? d_swp : d_data;
+    }
+
+    // merged list copied back to host
+    cudaMemcpy(data, A, size * sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaFree(A);
+    cudaFree(B);
 }
 
 int main(int argc, char *argv[])
 {
-    THREADS = atoi(argv[1]);
-    NUM_VALS = atoi(argv[2]);
+    NUM_VALS = atoi(argv[1]);
+    THREADS = atoi(argv[2]);
     BLOCKS = NUM_VALS / THREADS;
 
     printf("Number of threads: %d\n", THREADS);
     printf("Number of values: %d\n", NUM_VALS);
     printf("Number of blocks: %d\n", BLOCKS);
 
-    // Create caliper ConfigManager object
-    cali::ConfigManager mgr;
-    mgr.start();
+    int *values = (int *)malloc(NUM_VALS * sizeof(int));
+    fillArray(values, NUM_VALS, RANDOM);
 
-    clock_t start, stop;
+    // printArray(values, NUM_VALS);
 
-    float *values = (float *)malloc(NUM_VALS * sizeof(float));
-    array_fill(values, NUM_VALS);
+    mergesort(values, NUM_VALS);
 
-    start = clock();
-    bitonic_sort(values); /* Inplace */
-    stop = clock();
-
-    print_elapsed(start, stop);
-
-    effective_bandwidth_gb_s = (kernel_calls * 6 * NUM_VALS * sizeof(float) / 1000000000) / (bitonic_sort_step_time / 1000);
-    printf("CUDA host to device time (ms): %f\n", cudaMemcpy_host_to_device_time);
-    printf("CUDA bitonic sort step time (ms): %f\n", bitonic_sort_step_time);
-    printf("CUDA device to host time (ms): %f\n", cudaMemcpy_device_to_host_time);
-    printf("Kernel calls: %d\n", kernel_calls);
-    printf("Effective bandwith (GB/s): %f\n", effective_bandwidth_gb_s);
-
-    // Store results in these variables.
-    /*
-    float effective_bandwidth_gb_s;
-    float bitonic_sort_step_time;
-    float cudaMemcpy_host_to_device_time;
-    float cudaMemcpy_device_to_host_time;
-    */
-
-    adiak::init(NULL);
-    adiak::user();
-    adiak::launchdate();
-    adiak::libraries();
-    adiak::cmdline();
-    adiak::clustername();
-    adiak::value("num_threads", THREADS);
-    adiak::value("num_blocks", BLOCKS);
-    adiak::value("num_vals", NUM_VALS);
-    adiak::value("program_name", "cuda_bitonic_sort");
-    adiak::value("datatype_size", sizeof(float));
-    adiak::value("effective_bandwidth (GB/s)", effective_bandwidth_gb_s);
-    adiak::value("bitonic_sort_step_time", bitonic_sort_step_time);
-    adiak::value("cudaMemcpy_host_to_device_time", cudaMemcpy_host_to_device_time);
-    adiak::value("cudaMemcpy_device_to_host_time", cudaMemcpy_device_to_host_time);
-
-    // Flush Caliper output before finalizing MPI
-    mgr.stop();
-    mgr.flush();
+    // printArray(values, NUM_VALS);
+    cout << "Sorted?: " << is_sorted(values, NUM_VALS) << endl;
 }
