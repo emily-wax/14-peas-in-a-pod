@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/scratch/user/ansleythomp/14-peas-in-a-pod/bubble_sort.cpp
+stdio.h
+-
+time.h
+-
+math.h
+-
+stdlib.h
+-
+mpi.h
+/scratch/user/ansleythomp/14-peas-in-a-pod/mpi.h
+bubble_sort.h
+/scratch/user/ansleythomp/14-peas-in-a-pod/bubble_sort.h
+iostream
+-
+
+/scratch/user/ansleythomp/14-peas-in-a-pod/bubble_sort.h
+
+/sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/include/mpi.h
+stddef.h
+-
+cstdint
+-
+stdint.h
+-
+mpio.h
+/sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/include/mpio.h
+mpicxx.h
+/sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/include/mpicxx.h
+
+/sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/include/mpicxx.h
+stdio.h
+-
+
+/sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/include/mpio.h
+mpi.h
+/sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/include/mpi.h
+
