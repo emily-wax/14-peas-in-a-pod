@@ -111,27 +111,32 @@ void choose_splitters(int* local_splitter, int* values, int num_vals){
     // Choose p-1 local splitters (evenly separated)
     CALI_MARK_BEGIN(comp);
     CALI_MARK_BEGIN(comp_small);
+
     for(int i = 0; i < (num_procs - 1); i++)
     {
         local_splitter[i] = values[num_vals/(num_procs * num_procs) * (i+1)];
     }
-    CALI_MARK_BEGIN(comp);
-    CALI_MARK_BEGIN(comp_small);
+
+    CALI_MARK_END(comp_small);
+    CALI_MARK_END(comp);
 
     // Send local splitters back to root process
     global_splitter = (int *)malloc( sizeof(int) * num_procs * (num_procs - 1));
 
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_small);
+
     MPI_Gather(local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
-    CALI_MARK_END(comm);
+
     CALI_MARK_END(comm_small);
+    CALI_MARK_END(comm);
 
     // Root: run sort on splitters array
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_small);
     if(proc_id == 0)
     {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
+
         qsort( (char *) global_splitter, num_procs * (num_procs - 1), sizeof(int), intCompare);
 
         // Choose p-1 Global splitters (evenly separated)
@@ -139,9 +144,11 @@ void choose_splitters(int* local_splitter, int* values, int num_vals){
         {
             local_splitter[i] = global_splitter[(num_procs - 1) * (i + 1)];
         }
-        CALI_MARK_END(comp);
-        CALI_MARK_END(comp_small);
     }
+    CALI_MARK_END(comp_small);
+    CALI_MARK_END(comp);
+
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 /* Data Generation functions: generates data per process based on sorting type enum */
@@ -238,11 +245,7 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
     {
         if( i != proc_id )
         {
-            CALI_MARK_BEGIN(comm);
-            CALI_MARK_BEGIN(comm_large);
             MPI_Recv(recvbuf, block_size, MPI_INT, i, 0, MPI_COMM_WORLD, &status );
-            CALI_MARK_END(comm_large);
-            CALI_MARK_END(comm);
 
             // received item count and add to bucket vector
             MPI_Get_count(&status, MPI_INT, &recv_cnt);
@@ -260,13 +263,8 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
                 
                 if( j != proc_id)
                 {
-                    CALI_MARK_BEGIN(comm);
-                    CALI_MARK_BEGIN(comm_large);
 
                     MPI_Send( (buckets[j]).data(), (buckets[j]).size(), MPI_INT, j, 0, MPI_COMM_WORLD);
-
-                    CALI_MARK_END(comm_large);
-                    CALI_MARK_END(comm);
                 }
             }
         }
@@ -336,17 +334,29 @@ int main(int argc, char* argv[]){
 
     fillBuckets( buckets, local_splitter, proc_values_array, block_size);
 
+    CALI_MARK_END(comp_large);
+    CALI_MARK_END(comp);
+
     // Send values to each process based on its bucket indices (except self)
     vector<int> finalBucket;
 
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(comm_large);
+
     finalBucket = bucketComm( buckets, block_size);
 
+    CALI_MARK_END(comm_large);
+    CALI_MARK_END(comm);
+
     // Run sort on each process
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_large);
 
     sort(finalBucket.begin(), finalBucket.end());
 
     CALI_MARK_END(comp_large);
     CALI_MARK_END(comp);
+
 
     // Check if actually sorted
     CALI_MARK_BEGIN(correctness_check);
@@ -384,7 +394,6 @@ int main(int argc, char* argv[]){
     adiak::value("num_procs", num_procs); // The number of processors (MPI ranks)
     adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
     adiak::value("implementation_source", "Handwritten"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
-
 
 
     MPI_Finalize();
