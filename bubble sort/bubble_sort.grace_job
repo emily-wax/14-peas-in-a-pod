@@ -23,7 +23,7 @@ processes=$2
 module load intel/2020b       # load Intel software stack
 module load CMake/3.12.1
 
-CALI_CONFIG="spot(output=${matrix_size}-${processes}.cali)" \
+CALI_CONFIG="spot(output=${matrix_size}-${processes}.cali, time.variance)" \
 mpirun -np $processes ./bubble_sort $matrix_size
 
 squeue -j $SLURM_JOBID

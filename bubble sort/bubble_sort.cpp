@@ -26,7 +26,8 @@ const char* comm_small = "comm_small";
 const char* comp_large = "comp_large";
 const char* comp = "comp";
 const char* comp_small = "comp_small";
-
+const char* send = "MPI_Send";
+const char* recv = "MPI_Recv";
 
 enum sort_type{
     SORTED,
@@ -194,7 +195,9 @@ void bubble_sort(int* thread_values_array, int NUM_VALS){
                 // recieve block end_index to end_index + block size, from thread_id 1 greater than self
                 CALI_MARK_BEGIN(comm);
                 CALI_MARK_BEGIN(comm_small);
+                CALI_MARK_BEGIN(recv);
                 MPI_Recv(&thread_values_array[block_size], block_size, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CALI_MARK_END(recv);
                 CALI_MARK_END(comm_small);
                 CALI_MARK_END(comm);
                 // printArrayAll(thread_values_array, block_size);
@@ -207,7 +210,9 @@ void bubble_sort(int* thread_values_array, int NUM_VALS){
                 // send second half of list (end_index to end_index + block size) to thread_id 1 greater than self
                 CALI_MARK_BEGIN(comm);
                 CALI_MARK_BEGIN(comm_small);
+                CALI_MARK_BEGIN(send);
                 MPI_Send(&thread_values_array[block_size], block_size, MPI_INT, thread_id+1, 0, MPI_COMM_WORLD);
+                CALI_MARK_END(send);
                 CALI_MARK_END(comm_small);
                 CALI_MARK_END(comm);
             }
@@ -216,9 +221,13 @@ void bubble_sort(int* thread_values_array, int NUM_VALS){
                 //send block start_index to end index to thread_id 1 less than self
                 CALI_MARK_BEGIN(comm);
                 CALI_MARK_BEGIN(comm_small);
+                CALI_MARK_BEGIN(send);
                 MPI_Send(thread_values_array, block_size, MPI_INT, thread_id-1, 0, MPI_COMM_WORLD);
+                CALI_MARK_END(send);
                 //recieve new block start_index to end index from thread_id 1 less than self
+                CALI_MARK_BEGIN(recv);
                 MPI_Recv(thread_values_array, block_size, MPI_INT, thread_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CALI_MARK_END(recv);
                 CALI_MARK_END(comm_small);
                 CALI_MARK_END(comm);
             }
@@ -260,9 +269,13 @@ void bubble_sort(int* thread_values_array, int NUM_VALS){
                 //send block start_index to end index to thread_id 1 less than self
                 CALI_MARK_BEGIN(comm);
                 CALI_MARK_BEGIN(comm_small);
+                CALI_MARK_BEGIN(send);
                 MPI_Send(thread_values_array, block_size, MPI_INT, thread_id-1, 0, MPI_COMM_WORLD);
+                CALI_MARK_END(send);
                 //recieve new block start_index to end index from thread_id 1 less than self
+                CALI_MARK_BEGIN(recv);
                 MPI_Recv(thread_values_array, block_size, MPI_INT, thread_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CALI_MARK_END(recv);
                 CALI_MARK_END(comm_small);
                 CALI_MARK_END(comm);
             }
@@ -347,9 +360,29 @@ int main(int argc, char* argv[]){
     check_sort(thread_values_array, block_size); 
     CALI_MARK_END(correctness_check);
 
-
     CALI_MARK_END(main_cali);
+
+    adiak::init(NULL);
+    adiak::launchdate();    // launch date of the job
+    adiak::libraries();     // Libraries used
+    adiak::cmdline();       // Command line used to launch the job
+    adiak::clustername();   // Name of the cluster
+    adiak::value("Algorithm", "Bubble Sort(Odd/Even)"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+    adiak::value("ProgrammingModel", "MPI"); // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int"); // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int)); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", NUM_VALS); // The number of elements in input dataset (1000)
+    adiak::value("InputType", "1 perturbed"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    adiak::value("num_procs", num_threads); // The number of processors (MPI ranks)
+    adiak::value("num_threads", 0);
+    adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Handwritten"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+
+
     MPI_Finalize();
+
+
+
 }
 
 
