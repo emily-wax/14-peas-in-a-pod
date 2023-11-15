@@ -18,6 +18,16 @@
 using namespace std;
 
 
+const char* data_init = "data_init";
+const char* main_cali = "main";
+const char* correctness_check = "correctness_check";
+const char* comm = "comm";
+const char* comm_small = "comm_small";
+const char* comp_large = "comp_large";
+const char* comp = "comp";
+const char* comp_small = "comp_small";
+
+
 enum sort_type{
     SORTED,
     REVERSE_SORTED,
@@ -173,47 +183,88 @@ void bubble_sort(int* thread_values_array, int NUM_VALS){
     for (int k = 0; k < num_threads; k++){
         if (step){
             // printArrayAll(thread_values_array, block_size);
+
+            CALI_MARK_BEGIN(comp);
+            CALI_MARK_BEGIN(comp_small);
             sequential_bubble(thread_values_array, 0, block_size);
+            CALI_MARK_END(comp_small);
+            CALI_MARK_END(comp);
             // printArrayAll(thread_values_array, block_size);
             if (thread_id % 2 == 0){
                 // recieve block end_index to end_index + block size, from thread_id 1 greater than self
+                CALI_MARK_BEGIN(comm);
+                CALI_MARK_BEGIN(comm_small);
                 MPI_Recv(&thread_values_array[block_size], block_size, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CALI_MARK_END(comm_small);
+                CALI_MARK_END(comm);
                 // printArrayAll(thread_values_array, block_size);
+                CALI_MARK_BEGIN(comp);
+                CALI_MARK_BEGIN(comp_large);
                 sequential_bubble(thread_values_array, 0,  2 * block_size);
+                CALI_MARK_END(comp_large);
+                CALI_MARK_END(comp);
                 // printArrayAll(thread_values_array, block_size);
                 // send second half of list (end_index to end_index + block size) to thread_id 1 greater than self
+                CALI_MARK_BEGIN(comm);
+                CALI_MARK_BEGIN(comm_small);
                 MPI_Send(&thread_values_array[block_size], block_size, MPI_INT, thread_id+1, 0, MPI_COMM_WORLD);
+                CALI_MARK_END(comm_small);
+                CALI_MARK_END(comm);
             }
             else{
                 
                 //send block start_index to end index to thread_id 1 less than self
+                CALI_MARK_BEGIN(comm);
+                CALI_MARK_BEGIN(comm_small);
                 MPI_Send(thread_values_array, block_size, MPI_INT, thread_id-1, 0, MPI_COMM_WORLD);
                 //recieve new block start_index to end index from thread_id 1 less than self
                 MPI_Recv(thread_values_array, block_size, MPI_INT, thread_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CALI_MARK_END(comm_small);
+                CALI_MARK_END(comm);
             }
             step = !step;
         }
         else{
             //printArrayAll(thread_values_array, block_size);
+            CALI_MARK_BEGIN(comp);
+            CALI_MARK_BEGIN(comp_small);
             sequential_bubble(thread_values_array, 0, block_size);
+            CALI_MARK_END(comp_small);
+            CALI_MARK_END(comp);
             //printArrayAll(thread_values_array, block_size);
             if ((thread_id % 2 == 1) && (thread_id != num_threads -1)){ // not the first or last thread because those would cause the program to hang
                 // recieve block end_index to end_index + block size, from thread_id 1 greater than self
                 //printArrayAll(thread_values_array, block_size);
+                CALI_MARK_BEGIN(comm);
+                CALI_MARK_BEGIN(comm_small);
                 MPI_Recv(&thread_values_array[block_size], block_size, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, &statusRecv);
+                CALI_MARK_END(comm_small);
+                CALI_MARK_END(comm);
                 //cout << "thread id in the top loop is: " << thread_id <<" source is: " << statusRecv.MPI_SOURCE << endl;
                 //printArrayAll(thread_values_array, block_size);
+                CALI_MARK_BEGIN(comp);
+                CALI_MARK_BEGIN(comp_large);
                 sequential_bubble(thread_values_array, 0, 2 * block_size);
+                CALI_MARK_END(comp_large);
+                CALI_MARK_END(comp);
                 //printArrayAll(thread_values_array, block_size);
                 // send second half of list (end_index to end_index + block size) to thread_id 1 greater than self
+                CALI_MARK_BEGIN(comm);
+                CALI_MARK_BEGIN(comm_small);
                 MPI_Send(&thread_values_array[block_size], block_size, MPI_INT, thread_id+1, 0, MPI_COMM_WORLD);
+                CALI_MARK_END(comm_small);
+                CALI_MARK_END(comm);
             }
             else if ((thread_id % 2 == 0) && (thread_id != 0)){
                 //cout << "thread id in the bottom loop: " << thread_id << endl;
                 //send block start_index to end index to thread_id 1 less than self
+                CALI_MARK_BEGIN(comm);
+                CALI_MARK_BEGIN(comm_small);
                 MPI_Send(thread_values_array, block_size, MPI_INT, thread_id-1, 0, MPI_COMM_WORLD);
                 //recieve new block start_index to end index from thread_id 1 less than self
                 MPI_Recv(thread_values_array, block_size, MPI_INT, thread_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CALI_MARK_END(comm_small);
+                CALI_MARK_END(comm);
             }
             step = !step;
         }
@@ -276,21 +327,28 @@ int main(int argc, char* argv[]){
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    CALI_MARK_BEGIN(main_cali);
 
     int block_size = NUM_VALS / num_threads;
     int* thread_values_array = (int*) malloc (block_size * 2 * sizeof(int));
 
     //cout << "Size is: " << num_threads << " Block Size is: " << block_size << endl;
 
+    CALI_MARK_BEGIN(data_init);
     fillArray(thread_values_array, block_size, NUM_VALS, PERTURBED);
+    CALI_MARK_END(data_init);
 
     bubble_sort(thread_values_array, NUM_VALS);
 
 
     printArrayTogether(thread_values_array, block_size);
 
+    CALI_MARK_BEGIN(correctness_check);
     check_sort(thread_values_array, block_size); 
+    CALI_MARK_END(correctness_check);
 
+
+    CALI_MARK_END(main_cali);
     MPI_Finalize();
 }
 
