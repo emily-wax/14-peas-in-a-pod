@@ -203,10 +203,6 @@ The CUDA implementation is complete and all cali files are generated for all inp
 ### Call Tree:
 
 ### Graphs:
-<object data="https://docs.google.com/document/d/1WOGw0Qkzy5XZ5LP6ypT4JzP4xvbqyEmaI_zUzk3nYlE/edit?usp=sharing" type="application/pdf" width="700px" height="700px">
-    <embed src="https://docs.google.com/document/d/1WOGw0Qkzy5XZ5LP6ypT4JzP4xvbqyEmaI_zUzk3nYlE/edit?usp=sharing">
-        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="https://docs.google.com/document/d/1WOGw0Qkzy5XZ5LP6ypT4JzP4xvbqyEmaI_zUzk3nYlE/edit?usp=sharing">Download PDF</a>.</p>
-    </embed>
-</object>
+Graphs and performance analysis can be found in graphs.pdf.
 
 ## Questions:
