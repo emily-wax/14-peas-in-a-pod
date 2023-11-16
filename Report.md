@@ -201,7 +201,8 @@ The MPI implementation for sample sort is complete. The algorithm is pretty effi
 The CUDA implementation is complete and all cali files are generated for all input sizes on 512 and 1024 threads over all 4 sorts. The MPI implementation proved to be difficult - I had found code online and expected those sources to be adequate to be able to analyze and compare sorting across different parallelization strategies, however these implementations did not work as expected and paired with a only a basic understanding of how the implementation in CUDA was achieved, it was hard to debug or create MPI code for bitonic sort. I decided to focus on having a good implementation and analysis of bitonic sort in CUDA before doing MPI, so MPI is not implemented. 
 
 ### Call Tree:
-<img width="452" alt="image" src="https://github.com/emily-wax/14-peas-in-a-pod/assets/91850470/5e5ec76f-e74b-4230-9ba4-a571dab738a0">
+```<img width="452" alt="image" src="https://github.com/emily-wax/14-peas-in-a-pod/assets/91850470/5e5ec76f-e74b-4230-9ba4-a571dab738a0">
+```
 
 ### Graphs:
 Graphs and performance analysis can be found in graphs.pdf.
