@@ -292,11 +292,13 @@ void check_sort(int* thread_values_array, int block_size){
     int thread_id;
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
     MPI_Comm_rank(MPI_COMM_WORLD, &thread_id);
+    bool error = false; 
 
     // each thread is going to check itself to see if it's sorted
     for(int i = 0; i < block_size-1; i++){
         if (thread_values_array[i] > thread_values_array[i+1]){
             cout << "ERROR NOT SORTED\n" << endl;
+            error = true;
         }
     }
 
@@ -315,6 +317,7 @@ void check_sort(int* thread_values_array, int block_size){
         MPI_Recv(&below, 1, MPI_INT, thread_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         if (below > thread_values_array[0]){
             cout << "ERROR NOT SORTED\n" << endl;
+            error = true;
         }
     }
 
@@ -323,7 +326,15 @@ void check_sort(int* thread_values_array, int block_size){
         MPI_Recv(&above, 1, MPI_INT, thread_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         if (above < thread_values_array[0]){
             cout << "ERROR NOT SORTED\n" << endl;
+            error = true;
         }
+    }
+
+    if (error){
+        adiak::value("correctness", "failure");
+    }
+    else{
+        adiak::value("correctness", "success");
     }
 }
 
@@ -336,6 +347,7 @@ int main(int argc, char* argv[]){
     // nullptr won't matter to worker threads
     
     int thread_id;
+    int sort_type = atoi(argv[2]);
     
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD,&num_threads);
@@ -348,13 +360,13 @@ int main(int argc, char* argv[]){
     //cout << "Size is: " << num_threads << " Block Size is: " << block_size << endl;
 
     CALI_MARK_BEGIN(data_init);
-    fillArray(thread_values_array, block_size, NUM_VALS, PERTURBED);
+    fillArray(thread_values_array, block_size, NUM_VALS, sort_type);
     CALI_MARK_END(data_init);
 
     bubble_sort(thread_values_array, NUM_VALS);
 
 
-    printArrayTogether(thread_values_array, block_size);
+    //printArrayTogether(thread_values_array, block_size);
 
     CALI_MARK_BEGIN(correctness_check);
     check_sort(thread_values_array, block_size); 
@@ -372,7 +384,23 @@ int main(int argc, char* argv[]){
     adiak::value("Datatype", "int"); // The datatype of input elements (e.g., double, int, float)
     adiak::value("SizeOfDatatype", sizeof(int)); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
     adiak::value("InputSize", NUM_VALS); // The number of elements in input dataset (1000)
-    adiak::value("InputType", "1 perturbed"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    switch (sort_type) {
+        case SORTED:
+            adiak::value("InputType", "Sorted"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+            break;
+        case REVERSE_SORTED:
+            adiak::value("InputType", "ReverseSorted"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+            break;
+        case PERTURBED:
+            adiak::value("InputType", "1 perturbed"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+            break;
+        case RANDOM:
+            adiak::value("InputType", "Random"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+            break;
+        default:
+            adiak::value("InputType", "Invalid"); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+            break;
+    }
     adiak::value("num_procs", num_threads); // The number of processors (MPI ranks)
     adiak::value("num_threads", 0);
     adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
