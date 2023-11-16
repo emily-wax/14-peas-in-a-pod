@@ -189,7 +189,7 @@ https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html
 ## 4. Performance Evaluation
 ### Status:
 **Bubble Sort:**
-
+The MPI implementation is complete and it does work. However the algorithm is terribly ineffecient, so CALI files were not produced for the top 4 biggest input sizes. While I followed a reference for implementing an odd even version of bubble sort which should work well on a parallel system I was not able to comprehend it well enough to implement it as effeciently as possible. This lead to a lot of issues with the CUDA implementation for this algorithm, so after hours of attemts I decided to focus my energy on evaluating the algorithms. CUDA is not implemented for this algorithm. 
 
 **Sample Sort:**
 
