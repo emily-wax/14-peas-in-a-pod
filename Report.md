@@ -205,6 +205,6 @@ The CUDA implementation is complete and all cali files are generated for all inp
 ```
 
 ### Graphs:
-Graphs and performance analysis can be found in graphs.pdf.
+Graphs and performance analysis can be found in final project eval.pdf.
 
 ## Questions:
