@@ -113,23 +113,19 @@ __device__ void gpu_merge(int *source, int *dest, int start, int middle, int end
 }
 
 // mergesort for the slice given to device
-__global__ void gpu_mergesort(int *source, int *dest, int size, int width, int slices, dim3 *threads, dim3 *blocks)
+__global__ void gpu_mergesort(int *source, int *dest, int size, int width)
 {
     int idx = threadIdx.x + blockDim.x * blockIdx.x; // calculate unique index across threads and blocks
-    int start = width * idx * slices;                // used to index into array
+    int start = width * idx;                         // used to index into array
     int middle;
     int end;
 
-    for (int slice = 0; slice < slices; slice++)
-    {
-        if (start >= size)
-            break;
+    if (start >= size)
+        return;
 
-        middle = min(start + (width >> 1), size);
-        end = min(start + width, size);
-        gpu_merge(source, dest, start, middle, end);
-        start += width;
-    }
+    middle = min(start + (width >> 1), size);
+    end = min(start + width, size);
+    gpu_merge(source, dest, start, middle, end);
 }
 
 // called by host/main
@@ -152,25 +148,16 @@ void mergesort(int *data, int size)
 
     cudaMemcpy(d_data, data, size * sizeof(int), cudaMemcpyHostToDevice);
 
-    // allocate memory to send thread/block dims to devices
-    cudaMalloc((void **)&d_threads, sizeof(dim3));
-    cudaMalloc((void **)&d_blocks, sizeof(dim3));
-
-    cudaMemcpy(d_threads, &threads, sizeof(dim3), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_blocks, &blocks, sizeof(dim3), cudaMemcpyHostToDevice);
-
     // used to point to two arrays to make swapping easier
     int *A = d_data;
     int *B = d_swp;
 
-    int nThreads = NUM_VALS; // threads * blocks
+    // int nThreads = NUM_VALS; // threads * blocks
 
     // similar to mpi merge, slices start small and grow in size as you progress through merge tree
     for (int width = 2; width < (size * 2); width *= 2) // slice width multiplied by 2 each time, ends when width is og input size
     {
-        int slices = size / ((nThreads)*width) + 1;
-
-        gpu_mergesort<<<blocks, threads>>>(A, B, size, width, slices, d_threads, d_blocks);
+        gpu_mergesort<<<blocks, threads>>>(A, B, size, width);
 
         // swap A and B each time following gpu_mergesort to correctly track which is most updated merged
         A = A == d_data ? d_swp : d_data;
