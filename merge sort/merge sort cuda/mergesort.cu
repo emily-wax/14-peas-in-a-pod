@@ -116,7 +116,7 @@ __device__ void gpu_merge(int *source, int *dest, int start, int middle, int end
 __global__ void gpu_mergesort(int *source, int *dest, int size, int width)
 {
     int idx = threadIdx.x + blockDim.x * blockIdx.x; // calculate unique index across threads and blocks
-    int start = width * idx;                         // used to index into array
+    int start = width * idx;                         // used to index into array at start of slice
     int middle;
     int end;
 
@@ -132,12 +132,11 @@ __global__ void gpu_mergesort(int *source, int *dest, int size, int width)
 void mergesort(int *data, int size)
 {
 
+    cout << "mergesort() called" << endl;
+
     // will switch btwn following two arrays when merging (one holds most updated merged, one holds not)
     int *d_data;
     int *d_swp;
-
-    dim3 *d_threads;
-    dim3 *d_blocks;
 
     dim3 blocks(BLOCKS, 1);   // number of blocks
     dim3 threads(THREADS, 1); // number of threads
@@ -148,24 +147,31 @@ void mergesort(int *data, int size)
 
     cudaMemcpy(d_data, data, size * sizeof(int), cudaMemcpyHostToDevice);
 
+    cout << "memory copied to device" << endl;
+
     // used to point to two arrays to make swapping easier
     int *A = d_data;
     int *B = d_swp;
 
-    // int nThreads = NUM_VALS; // threads * blocks
-
     // similar to mpi merge, slices start small and grow in size as you progress through merge tree
-    for (int width = 2; width < (size * 2); width *= 2) // slice width multiplied by 2 each time, ends when width is og input size
+    for (int width = 2; width < (size << 1); width <<= 1) // slice width multiplied by 2 each time, ends when width is og input size
     {
         gpu_mergesort<<<blocks, threads>>>(A, B, size, width);
+        cout << "kernel call, width: " << width << endl;
 
         // swap A and B each time following gpu_mergesort to correctly track which is most updated merged
         A = A == d_data ? d_swp : d_data;
         B = B == d_data ? d_swp : d_data;
     }
 
+    cudaDeviceSynchronize();
+
+    cout << "kernel calls done, cuda device synchronized" << endl;
+
     // merged list copied back to host
     cudaMemcpy(data, A, size * sizeof(int), cudaMemcpyDeviceToHost);
+
+    cout << "memory copied back" << endl;
 
     cudaFree(A);
     cudaFree(B);
@@ -184,10 +190,10 @@ int main(int argc, char *argv[])
     int *values = (int *)malloc(NUM_VALS * sizeof(int));
     fillArray(values, NUM_VALS, RANDOM);
 
-    // printArray(values, NUM_VALS);
+    printArray(values, NUM_VALS);
 
     mergesort(values, NUM_VALS);
 
-    // printArray(values, NUM_VALS);
+    printArray(values, NUM_VALS);
     cout << "Sorted?: " << is_sorted(values, NUM_VALS) << endl;
 }
