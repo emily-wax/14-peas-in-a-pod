@@ -192,7 +192,7 @@ https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html
 The MPI implementation is complete and it does work. However the algorithm is terribly ineffecient, so CALI files were not produced for the top 4 biggest input sizes. While I followed a reference for implementing an odd even version of bubble sort which should work well on a parallel system I was not able to comprehend it well enough to implement it as effeciently as possible. This lead to a lot of issues with the CUDA implementation for this algorithm, so after hours of attemts I decided to focus my energy on evaluating the algorithms. CUDA is not implemented for this algorithm. 
 
 **Sample Sort:**
-
+The MPI implementation for sample sort is complete. The algorithm is pretty efficient but performs worse on higher threads due to its high quantity of communication. When trying to implement the CUDA version of sample sort I got it mostly working except for a small race condition. I spent hours trying to find a solution to this and reached out to the TA for help but nothing seemed to work. It got to the point where I decided to focus on the testing of my MPI implementation. I got all the .cali files except for a few random ones. CUDA is not implemented.
 
 **Merge Sort:**
 
