@@ -195,11 +195,16 @@ The MPI implementation is complete and it does work. However the algorithm is te
 The MPI implementation for sample sort is complete. The algorithm is pretty efficient but performs worse on higher threads due to its high quantity of communication. When trying to implement the CUDA version of sample sort I got it mostly working except for a small race condition. I spent hours trying to find a solution to this and reached out to the TA for help but nothing seemed to work. It got to the point where I decided to focus on the testing of my MPI implementation. I got all the .cali files except for a few random ones. CUDA is not implemented.
 
 **Merge Sort:**
-
+The MPI implementation of merge sort is complete and functional - Caliper files have been generated for all 70 * 4 runs. The algorithm seems to have relatively constant runtimes even as more threads are added, which is to be expected given the unavoidable sequential portions of the algorithm when merging. I also attempted to implement a CUDA version of merge sort from an online source, but the code only worked inconsistently for some small input sizes and I got stuck trying to debug this. For this reason, I chose to finish testing for the MPI implementation in order to continue making progress on the project.
 
 **Bitonic Sort:**
 The CUDA implementation is complete and all cali files are generated for all input sizes on 512 and 1024 threads over all 4 sorts. The MPI implementation proved to be difficult - I had found code online and expected those sources to be adequate to be able to analyze and compare sorting across different parallelization strategies, however these implementations did not work as expected and paired with a only a basic understanding of how the implementation in CUDA was achieved, it was hard to debug or create MPI code for bitonic sort. I decided to focus on having a good implementation and analysis of bitonic sort in CUDA before doing MPI, so MPI is not implemented. 
 
+### Call Tree:
+```<img width="452" alt="image" src="https://github.com/emily-wax/14-peas-in-a-pod/assets/91850470/5e5ec76f-e74b-4230-9ba4-a571dab738a0">
+```
+
 ### Graphs:
+Graphs and performance analysis can be found in final project eval.pdf.
 
 ## Questions:
