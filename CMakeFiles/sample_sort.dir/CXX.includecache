@@ -163,8 +163,6 @@ string
 -
 algorithm
 -
-compare
--
 iostream
 -
 limits.h

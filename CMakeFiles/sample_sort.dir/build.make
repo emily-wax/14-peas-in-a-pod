@@ -60,15 +60,15 @@ include CMakeFiles/sample_sort.dir/flags.make
 CMakeFiles/sample_sort.dir/sample_sort.cpp.o: CMakeFiles/sample_sort.dir/flags.make
 CMakeFiles/sample_sort.dir/sample_sort.cpp.o: sample_sort.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/sample_sort.dir/sample_sort.cpp.o"
-	/sw/eb/sw/GCCcore/10.2.0/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/sample_sort.dir/sample_sort.cpp.o -c /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/sample_sort.cpp
+	/sw/eb/sw/GCCcore/7.3.0/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/sample_sort.dir/sample_sort.cpp.o -c /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/sample_sort.cpp
 
 CMakeFiles/sample_sort.dir/sample_sort.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/sample_sort.dir/sample_sort.cpp.i"
-	/sw/eb/sw/GCCcore/10.2.0/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/sample_sort.cpp > CMakeFiles/sample_sort.dir/sample_sort.cpp.i
+	/sw/eb/sw/GCCcore/7.3.0/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/sample_sort.cpp > CMakeFiles/sample_sort.dir/sample_sort.cpp.i
 
 CMakeFiles/sample_sort.dir/sample_sort.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/sample_sort.dir/sample_sort.cpp.s"
-	/sw/eb/sw/GCCcore/10.2.0/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/sample_sort.cpp -o CMakeFiles/sample_sort.dir/sample_sort.cpp.s
+	/sw/eb/sw/GCCcore/7.3.0/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/sample_sort.cpp -o CMakeFiles/sample_sort.dir/sample_sort.cpp.s
 
 # Object files for target sample_sort
 sample_sort_OBJECTS = \

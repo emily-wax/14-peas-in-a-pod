@@ -9,7 +9,7 @@
 #include <string>
 
 #include <algorithm>
-#include <compare>
+//#include <compare>
 #include <iostream>
 #include <limits.h>
 #include <stdio.h>
@@ -36,6 +36,10 @@ const char* comm_large = "comm_large";
 const char* comp = "comp";
 const char* comp_small = "comp_small"; 
 const char* comp_large = "comp_large"; 
+const char* broadcast = "MPI_Bcast";
+const char* gather = "MPI_Gather";
+const char* send   = "MPI_Send";
+const char* recv   = "MPI_Recv";
 
 enum sort_type{
     SORTED,
@@ -66,12 +70,12 @@ void printArray(vector<int> values, int num_values, int proc_id){
 
 /* check sort - compares each processes values to make sure it's sorted
                 and is sorted in comparison to others. */
-void check_sort(vector<int> thread_values_array, int size){
+bool check_sort(vector<int> thread_values_array, int size){
 
     // each thread is going to check itself to see if it's sorted
     for(int i = 0; i < size-1; i++){
         if (thread_values_array[i] > thread_values_array[i+1]){
-            cout << "ERROR NOT SORTED\n" << endl;
+            return false;
         }
     }
 
@@ -89,7 +93,7 @@ void check_sort(vector<int> thread_values_array, int size){
     if (proc_id > 0){
         MPI_Recv(&below, 1, MPI_INT, proc_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         if (below > thread_values_array[0]){
-            cout << "ERROR NOT SORTED\n" << endl;
+            return false;
         }
     }
 
@@ -97,9 +101,11 @@ void check_sort(vector<int> thread_values_array, int size){
     if (proc_id < num_procs-1){
         MPI_Recv(&above, 1, MPI_INT, proc_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         if (above < thread_values_array.back()){
-            cout << "ERROR NOT SORTED\n" << endl;
+            return false;
         }
     }
+
+    return true;
 }
 
 /* choose_splitters - chooses p - 1 local splitters. Root process gathers
@@ -125,9 +131,11 @@ void choose_splitters(int* local_splitter, int* values, int num_vals){
 
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_small);
+    CALI_MARK_BEGIN(gather);
 
     MPI_Gather(local_splitter, num_procs - 1, MPI_INT, global_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    CALI_MARK_END(gather);
     CALI_MARK_END(comm_small);
     CALI_MARK_END(comm);
 
@@ -245,7 +253,16 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
     {
         if( i != proc_id )
         {
+            CALI_MARK_BEGIN(comm);
+            CALI_MARK_BEGIN(comm_large);
+            CALI_MARK_BEGIN(recv);
+
             MPI_Recv(recvbuf, block_size, MPI_INT, i, 0, MPI_COMM_WORLD, &status );
+
+            CALI_MARK_END(recv);
+            CALI_MARK_END(comm_large);
+            CALI_MARK_END(comm);
+            
 
             // received item count and add to bucket vector
             MPI_Get_count(&status, MPI_INT, &recv_cnt);
@@ -264,7 +281,15 @@ vector<int> bucketComm(vector<vector<int>> buckets, int block_size){
                 if( j != proc_id)
                 {
 
+                    CALI_MARK_BEGIN(comm);
+                    CALI_MARK_BEGIN(comm_large);
+                    CALI_MARK_BEGIN(send);
+
                     MPI_Send( (buckets[j]).data(), (buckets[j]).size(), MPI_INT, j, 0, MPI_COMM_WORLD);
+
+                    CALI_MARK_END(send);
+                    CALI_MARK_END(comm_large);
+                    CALI_MARK_END(comm);
                 }
             }
         }
@@ -284,9 +309,9 @@ int main(int argc, char* argv[]){
     // Command Line Arguments: size, processes
     int NUM_VALS = atoi(argv[1]);
     int* local_splitter;
-    int sorttype;
+    bool sorted;
+    int sorttype = atoi(argv[2]);
     
-    sorttype = PERTURBED;
     // MPI initialization 
     MPI_Init(&argc, &argv);
 
@@ -311,9 +336,11 @@ int main(int argc, char* argv[]){
     // Broadcast Global Splitters to all other processes
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_small);
+    CALI_MARK_BEGIN(broadcast);
 
     MPI_Bcast( local_splitter, num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    CALI_MARK_END(broadcast);
     CALI_MARK_END(comm_small);
     CALI_MARK_END(comm);
     
@@ -340,13 +367,9 @@ int main(int argc, char* argv[]){
     // Send values to each process based on its bucket indices (except self)
     vector<int> finalBucket;
 
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(comm_large);
 
     finalBucket = bucketComm( buckets, block_size);
 
-    CALI_MARK_END(comm_large);
-    CALI_MARK_END(comm);
 
     // Run sort on each process
     CALI_MARK_BEGIN(comp);
@@ -361,23 +384,30 @@ int main(int argc, char* argv[]){
     // Check if actually sorted
     CALI_MARK_BEGIN(correctness_check);
 
-    check_sort(finalBucket, finalBucket.size());
+    sorted = check_sort(finalBucket, finalBucket.size());
 
     CALI_MARK_END(correctness_check);
 
     CALI_MARK_END(main_cali);
 
     string sort_string;
+    string check_string;
 
     if( sorttype == SORTED)
     {
         sort_string = "sorted";
     } else if( sorttype == PERTURBED){
-        sort_string = "1%/ perturbed";
+        sort_string = "1 perturbed";
     } else if( sorttype == REVERSE_SORTED){
         sort_string  = "reversed";
     } else{
         sort_string = "random";
+    }
+
+    if(sorted){
+        check_string = "success";
+    } else{
+        check_string = "failure";
     }
 
     adiak::init(NULL);
@@ -392,8 +422,10 @@ int main(int argc, char* argv[]){
     adiak::value("InputSize", NUM_VALS); // The number of elements in input dataset (1000)
     adiak::value("InputType", sort_string); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", num_procs); // The number of processors (MPI ranks)
+    adiak::value("num_threads", 0); // The number of processors (MPI ranks)
     adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
     adiak::value("implementation_source", "Handwritten"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+    adiak::value("correctness", check_string);
 
 
     MPI_Finalize();
