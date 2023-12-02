@@ -65,7 +65,7 @@ void array_fill(int *arr, int length, int sort_type){
   int i;
   if (sort_type == RANDOM){
     for (i = 0; i < length; ++i) {
-      arr[i] = rand() % (INT_MAX);
+      arr[i] = rand() % (2000);
     } 
   }
   else if (sort_type == SORTED){
@@ -141,40 +141,63 @@ __global__ void getBucketSize( const int* data, int* splitters, int* bucket_caps
   }
 }
 
-__global__ void distributeData( const int* data, int* sorted_array, int* splitters, int* bucket_starts, int* bucket_sizes, int num_threads, int block_size){
+__global__ void distributeData( const int* data, int* sorted_array, int* splitters, int* bucket_starts, int* bucket_sizes, int num_threads, int block_size, int num_vals){
 
   unsigned int thread_id;
-  int start_index;
+  int curr_index, end_index;
+  int start_bound, end_bound;
   int value;
+
+  // plan:
+  // iterate over full array, add to only your bucket by putting things in the sorted_array
 
   thread_id = threadIdx.x + blockDim.x * blockIdx.x;
 
+  if(thread_id ==  num_threads - 1){
+    end_index = num_vals;
+  }else{
+    end_index = bucket_starts[thread_id + 1];
+  }
+
+  // EW NOTE: bucket starts accounts for the bucket size calculated ... they are not the bounding values
+
+  // right now, indexes are bucket bounds
+  curr_index = bucket_starts[ thread_id ];
+
   // get start index of block (inclusive)
-  start_index = thread_id * block_size;
+  if( thread_id == 0){
+    start_bound = 0;
+  } else{
+    start_bound = splitters[thread_id - 1];
+  }
 
-  // see which bucket element belongs in
-  for( int j = 0; j < block_size; j++)
-  {
-    value = data[start_index + j ];
-    for(int i = 0; i < num_threads - 1; i++)
-    {
-      if( value < splitters[ i ] )
-      {
-        sorted_array[bucket_starts[i] + bucket_sizes[i]] = value;
-        atomicAdd( &bucket_sizes[i], 1);
-        break;
-      }
+  if( thread_id == (num_threads - 1)){
+    // EW TODO: add num vals to parameters
+    end_bound = INT_MAX;
+  } else{
+    end_bound = splitters[ thread_id ];
+  }
 
-      // atomically increase that bucket's size
-      if( i == num_threads - 2 )
-      {
-        sorted_array[bucket_starts[i + 1] + bucket_sizes[i + 1]] = value;
-        atomicAdd(&bucket_sizes[i + 1], 1);
-      }
+  for(int i = 0; i < num_vals; i++){
+    if( data[i] >= start_bound && data[i] < end_bound ){
+      sorted_array[curr_index] = data[i];
+      curr_index++;
     }
   }
 
   __syncthreads();
+
+  // EW TODO: sort own bucket
+
+    for (int i = bucket_starts[thread_id]; i < end_index; i++) {
+        int key = sorted_array[i];
+        int j = i - 1;
+        while (j >= bucket_starts[thread_id] && sorted_array[j] > key) {
+            sorted_array[j + 1] = sorted_array[j];
+            j--;
+        }
+        sorted_array[j + 1] = key;
+    }
 
 }
 
@@ -209,7 +232,7 @@ int main(int argc, char *argv[]){
   dim3 blocks(BLOCKS,1);    /* Number of blocks   */
   dim3 threads(THREADS,1);  /* Number of threads  */
 
-  array_fill(values, NUM_VALS, SORTED);
+  array_fill(values, NUM_VALS, RANDOM);
 
   array_print(values, NUM_VALS);
 
@@ -273,7 +296,8 @@ int main(int argc, char *argv[]){
 
   cudaMemcpy(dev_starts, bucket_starts, THREADS * sizeof(int), cudaMemcpyHostToDevice);
 
-  distributeData<<<1, threads>>>(dev_values, dev_sorted, dev_global_splitters, dev_starts, dev_sizes, THREADS, BLOCKS);
+  // EW TODO: may need to traverse whole array per bucket
+  distributeData<<<1, threads>>>(dev_values, dev_sorted, dev_global_splitters, dev_starts, dev_sizes, THREADS, BLOCKS, NUM_VALS);
 
   cudaMemcpy( sorted_array, dev_sorted, NUM_VALS * sizeof(int), cudaMemcpyDeviceToHost);
 
