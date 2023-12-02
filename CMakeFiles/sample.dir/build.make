@@ -79,6 +79,12 @@ sample_EXTERNAL_OBJECTS =
 
 CMakeFiles/sample.dir/cmake_device_link.o: CMakeFiles/sample.dir/sample_sort.cu.o
 CMakeFiles/sample.dir/cmake_device_link.o: CMakeFiles/sample.dir/build.make
+CMakeFiles/sample.dir/cmake_device_link.o: /scratch/group/csce435-f23/Caliper/caliper/lib64/libcaliper.so.2.11.0-dev
+CMakeFiles/sample.dir/cmake_device_link.o: /sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/lib/libmpicxx.so
+CMakeFiles/sample.dir/cmake_device_link.o: /sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/lib/release/libmpi.so
+CMakeFiles/sample.dir/cmake_device_link.o: /lib64/librt.so
+CMakeFiles/sample.dir/cmake_device_link.o: /lib64/libpthread.so
+CMakeFiles/sample.dir/cmake_device_link.o: /lib64/libdl.so
 CMakeFiles/sample.dir/cmake_device_link.o: CMakeFiles/sample.dir/dlink.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CUDA device code CMakeFiles/sample.dir/cmake_device_link.o"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/sample.dir/dlink.txt --verbose=$(VERBOSE)
@@ -97,6 +103,12 @@ sample_EXTERNAL_OBJECTS =
 
 sample: CMakeFiles/sample.dir/sample_sort.cu.o
 sample: CMakeFiles/sample.dir/build.make
+sample: /scratch/group/csce435-f23/Caliper/caliper/lib64/libcaliper.so.2.11.0-dev
+sample: /sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/lib/libmpicxx.so
+sample: /sw/eb/sw/impi/2019.9.304-iccifort-2020.4.304/intel64/lib/release/libmpi.so
+sample: /lib64/librt.so
+sample: /lib64/libpthread.so
+sample: /lib64/libdl.so
 sample: CMakeFiles/sample.dir/cmake_device_link.o
 sample: CMakeFiles/sample.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/scratch/user/emily.wax/csce435/final_project/14-peas-in-a-pod/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CUDA executable sample"

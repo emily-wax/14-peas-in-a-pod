@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <thrust/device_vector.h>
-#include <thrust/sort.h>
+#include <string>
+
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
@@ -21,6 +21,19 @@ using namespace std;
 int THREADS;
 int BLOCKS;
 int NUM_VALS;
+
+/* Define Caliper Region Names*/
+const char* main_cali = "main"; 
+const char* data_init = "data_init";
+const char* correctness_check = "correctness_check"; 
+const char* comm = "comm"; 
+const char* comm_small = "comm_small"; 
+const char* comm_large = "comm_large"; 
+const char* comp = "comp";
+const char* comp_small = "comp_small"; 
+const char* comp_large = "comp_large"; 
+
+// EW TODO: add cuda memcpy as a section ... check ansley's naming conventions
 
 /* Sort Types */
 enum sort_type{
@@ -146,7 +159,6 @@ __global__ void distributeData( const int* data, int* sorted_array, int* splitte
   unsigned int thread_id;
   int curr_index, end_index;
   int start_bound, end_bound;
-  int value;
 
   // plan:
   // iterate over full array, add to only your bucket by putting things in the sorted_array
@@ -211,14 +223,22 @@ int main(int argc, char *argv[]){
   int * dev_starts;
   int * dev_sizes;
   int prefix_sum = 0;
+  bool sorted;
 
+  int sorttype = atoi(argv[3]);
   THREADS = atoi(argv[1]);
   NUM_VALS = atoi(argv[2]);
+
   BLOCKS = NUM_VALS / THREADS;
 
   printf("Number of threads: %d\n", THREADS);
   printf("Number of values: %d\n", NUM_VALS);
   printf("Size of blocks: %d\n", BLOCKS);
+
+  cali::ConfigManager mgr;
+  mgr.start();
+
+  CALI_MARK_BEGIN(main_cali);
 
   // allocate space for values and splitters
   int *values = (int*) malloc( NUM_VALS * sizeof(int));
@@ -232,60 +252,94 @@ int main(int argc, char *argv[]){
   dim3 blocks(BLOCKS,1);    /* Number of blocks   */
   dim3 threads(THREADS,1);  /* Number of threads  */
 
-  array_fill(values, NUM_VALS, RANDOM);
+  CALI_MARK_BEGIN(data_init);
+  array_fill(values, NUM_VALS, sorttype);
+  CALI_MARK_END(data_init);
 
-  array_print(values, NUM_VALS);
+  // array_print(values, NUM_VALS);
 
   /* Cuda mallocs for values and all splitters arrays */
   cudaMalloc((void**) &dev_values, NUM_VALS * sizeof(int));
   cudaMalloc((void**) &dev_splitters, sizeof(int) * (THREADS - 1) * THREADS );
 
   /* Memcpy from host to device */
+
+  CALI_MARK_BEGIN(comm);
   cudaMemcpy(dev_values, values, NUM_VALS * sizeof(int), cudaMemcpyHostToDevice);
+  CALI_MARK_END(comm);
   // EW TODO: do I have to memcpy for splitters when there isn't anything in there?
 
   /* <<<numBlocks, threadsPerBlock>>> */
-  localSplitters<<<1, threads>>>(dev_values, dev_splitters, THREADS, NUM_VALS, BLOCKS);
+  CALI_MARK_BEGIN(comp);
+  CALI_MARK_BEGIN(comp_small);
+  localSplitters<<<blocks, threads>>>(dev_values, dev_splitters, THREADS, NUM_VALS, BLOCKS);
+  CALI_MARK_END(comp_small);
+  CALI_MARK_END(comp);
 
-  /* Memcpy from devie to host */
+  /* Memcpy from device to host */
+  CALI_MARK_BEGIN(comm);
   cudaMemcpy(all_splitters, dev_splitters, sizeof(int) * (THREADS - 1) * THREADS, cudaMemcpyDeviceToHost);
+  CALI_MARK_END(comm);
 
   cudaFree(dev_splitters);
 
   /* sort all splitters and choose global */
+  CALI_MARK_BEGIN(comp);
+  CALI_MARK_BEGIN(comp_small);
   qsort((char *) all_splitters, THREADS * (THREADS - 1), sizeof(int), intCompare);
 
   for(int i = 0; i < THREADS - 1; i++)
   {
     global_splitters[i] = all_splitters[(THREADS - 1) * (i + 1)];
   }
+  CALI_MARK_END(comp_small);
+  CALI_MARK_END(comp);
 
-  array_print(all_splitters, (THREADS - 1) * THREADS);
-  array_print(global_splitters, THREADS - 1);
+  // array_print(all_splitters, (THREADS - 1) * THREADS);
+  // array_print(global_splitters, THREADS - 1);
 
   // have a function that calculates the offsets (determines starting point for each bucket)
   cudaMalloc((void**) &dev_bucket_caps, THREADS * sizeof(int));
   cudaMalloc((void**) &dev_global_splitters, sizeof(int) * (THREADS - 1) );
 
   /* host to device*/
+
+  for(int i = 0; i < THREADS; i++){
+    bucket_caps[i] = 0;
+  }
+
+  CALI_MARK_BEGIN(comm);
   cudaMemcpy( dev_bucket_caps, bucket_caps, sizeof(int) * THREADS, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_global_splitters, global_splitters, sizeof(int) * (THREADS - 1), cudaMemcpyHostToDevice);
+  CALI_MARK_END(comm);
 
-  getBucketSize<<<1, threads>>>(dev_values, dev_global_splitters, dev_bucket_caps, THREADS, BLOCKS);
+  CALI_MARK_BEGIN(comp);
+  CALI_MARK_BEGIN(comp_large);
 
+  getBucketSize<<<blocks, threads>>>(dev_values, dev_global_splitters, dev_bucket_caps, THREADS, BLOCKS);
+  CALI_MARK_END(comp_large);
+  CALI_MARK_END(comp);
+
+  CALI_MARK_BEGIN(comm);
   cudaMemcpy(bucket_caps, dev_bucket_caps, THREADS * sizeof(int), cudaMemcpyDeviceToHost);
+  CALI_MARK_END(comm);
 
-  array_print(bucket_caps, THREADS);
+  // array_print(bucket_caps, THREADS);
 
   // run prefix sum to calculate starting point
+
+  CALI_MARK_BEGIN(comp);
+  CALI_MARK_BEGIN(comp_small);
   bucket_starts[0] = 0;
 
   for(int i = 1; i < THREADS; i++){
     prefix_sum += bucket_caps[i - 1];
     bucket_starts[i] = prefix_sum;
   }
+  CALI_MARK_END(comp_small);
+  CALI_MARK_END(comp);
 
-  array_print(bucket_starts, THREADS);
+  // array_print(bucket_starts, THREADS);
 
   // distribute data (use atomic add with size of buckets until offset and size match)
   cudaMalloc((void**) &dev_sorted, NUM_VALS * sizeof(int));
@@ -293,25 +347,81 @@ int main(int argc, char *argv[]){
   cudaMalloc((void**) &dev_sizes, THREADS* sizeof(int));
 
   // use the offsets and size to accurately place into sorted data
-
+  CALI_MARK_BEGIN(comm);
   cudaMemcpy(dev_starts, bucket_starts, THREADS * sizeof(int), cudaMemcpyHostToDevice);
+  CALI_MARK_END(comm);
 
   // EW TODO: may need to traverse whole array per bucket
-  distributeData<<<1, threads>>>(dev_values, dev_sorted, dev_global_splitters, dev_starts, dev_sizes, THREADS, BLOCKS, NUM_VALS);
+  CALI_MARK_BEGIN(comp);
+  CALI_MARK_BEGIN(comp_large);
+  distributeData<<<blocks, threads>>>(dev_values, dev_sorted, dev_global_splitters, dev_starts, dev_sizes, THREADS, BLOCKS, NUM_VALS);
+  CALI_MARK_END(comp_large);
+  CALI_MARK_END(comp);
 
+  CALI_MARK_BEGIN(comm);
   cudaMemcpy( sorted_array, dev_sorted, NUM_VALS * sizeof(int), cudaMemcpyDeviceToHost);
+  CALI_MARK_END(comm);
 
   // print sorted array
-  array_print(sorted_array, NUM_VALS);
+  // array_print(sorted_array, NUM_VALS);
 
   /* free device memory */
   cudaFree(dev_values);
   cudaFree(dev_global_splitters);
   cudaFree(dev_bucket_caps);
 
-
+  CALI_MARK_BEGIN(correctness_check);
   if (!check_array(sorted_array, NUM_VALS)){
     printf("ERROR ARRAY IS NOT SORTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n");
+    sorted = false;
+  } else{
+    printf("ARRAY IS SORTED\n\n\n");
+    sorted = true;
   }
+  CALI_MARK_END(correctness_check);
+
+  CALI_MARK_END(main_cali);
+
+  string sort_string;
+  string check_string;
+
+  if( sorttype == SORTED)
+  {
+      sort_string = "sorted";
+  } else if( sorttype == PERTURBED){
+      sort_string = "1 perturbed";
+  } else if( sorttype == REVERSE_SORTED){
+      sort_string  = "reversed";
+  } else{
+      sort_string = "random";
+  }
+
+    if(sorted){
+        check_string = "success";
+    } else{
+        check_string = "failure";
+    }
+
+  adiak::init(NULL);
+  adiak::launchdate();    // launch date of the job
+  adiak::libraries();     // Libraries used
+  adiak::cmdline();       // Command line used to launch the job
+  adiak::clustername();   // Name of the cluster
+  adiak::value("Algorithm", "BitonicSort"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+  adiak::value("ProgrammingModel", "CUDA"); // e.g., "MPI", "CUDA", "MPIwithCUDA"
+  adiak::value("Datatype", "float"); // The datatype of input elements (e.g., double, int, float)
+  adiak::value("SizeOfDatatype", 4); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+  adiak::value("InputSize", NUM_VALS); // The number of elements in input dataset (1000)
+  adiak::value("InputType", sort_string); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+  adiak::value("num_procs", "0"); // The number of processors (MPI ranks)
+  adiak::value("num_threads", THREADS); // The number of CUDA or OpenMP threads
+  adiak::value("num_blocks", BLOCKS); // The number of CUDA blocks 
+  adiak::value("group_num", 14); // The number of your group (integer, e.g., 1, 10)
+  adiak::value("implementation_source", "Handwritten"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+  adiak::value("correctness_check", check_string);
+
+  // Flush Caliper output before finalizing MPI
+  mgr.stop();
+  mgr.flush();
 
 }

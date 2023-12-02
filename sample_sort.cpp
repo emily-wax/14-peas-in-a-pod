@@ -367,7 +367,6 @@ int main(int argc, char* argv[]){
     // Send values to each process based on its bucket indices (except self)
     vector<int> finalBucket;
 
-
     finalBucket = bucketComm( buckets, block_size);
 
 

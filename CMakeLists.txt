@@ -20,3 +20,6 @@ include_directories(${adiak_INCLUDE_DIRS})
 
 target_link_libraries(sample_sort PRIVATE MPI::MPI_CXX)
 target_link_libraries(sample_sort PRIVATE caliper)
+
+target_link_libraries(sample PRIVATE MPI::MPI_CXX)
+target_link_libraries(sample PRIVATE caliper)
