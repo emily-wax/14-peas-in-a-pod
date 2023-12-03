@@ -29,6 +29,7 @@ const char* correctness_check = "correctness_check";
 const char* comm = "comm"; 
 const char* comm_small = "comm_small"; 
 const char* comm_large = "comm_large"; 
+const char* cudaMemcpy_region = "cudaMemcpy";
 const char* comp = "comp";
 const char* comp_small = "comp_small"; 
 const char* comp_large = "comp_large"; 
@@ -265,7 +266,13 @@ int main(int argc, char *argv[]){
   /* Memcpy from host to device */
 
   CALI_MARK_BEGIN(comm);
+  CALI_MARK_BEGIN(comm_large);
+  CALI_MARK_BEGIN(cudaMemcpy_region);
+
   cudaMemcpy(dev_values, values, NUM_VALS * sizeof(int), cudaMemcpyHostToDevice);
+
+  CALI_MARK_END(cudaMemcpy_region);
+  CALI_MARK_END(comm_large);
   CALI_MARK_END(comm);
   // EW TODO: do I have to memcpy for splitters when there isn't anything in there?
 
@@ -278,7 +285,13 @@ int main(int argc, char *argv[]){
 
   /* Memcpy from device to host */
   CALI_MARK_BEGIN(comm);
+  CALI_MARK_BEGIN(comm_large);
+  CALI_MARK_BEGIN(cudaMemcpy_region);
+
   cudaMemcpy(all_splitters, dev_splitters, sizeof(int) * (THREADS - 1) * THREADS, cudaMemcpyDeviceToHost);
+
+  CALI_MARK_END(cudaMemcpy_region);
+  CALI_MARK_END(comm_large);
   CALI_MARK_END(comm);
 
   cudaFree(dev_splitters);
@@ -295,9 +308,6 @@ int main(int argc, char *argv[]){
   CALI_MARK_END(comp_small);
   CALI_MARK_END(comp);
 
-  // array_print(all_splitters, (THREADS - 1) * THREADS);
-  // array_print(global_splitters, THREADS - 1);
-
   // have a function that calculates the offsets (determines starting point for each bucket)
   cudaMalloc((void**) &dev_bucket_caps, THREADS * sizeof(int));
   cudaMalloc((void**) &dev_global_splitters, sizeof(int) * (THREADS - 1) );
@@ -309,19 +319,32 @@ int main(int argc, char *argv[]){
   }
 
   CALI_MARK_BEGIN(comm);
+  CALI_MARK_BEGIN(comm_large);
+  CALI_MARK_BEGIN(cudaMemcpy_region);
+
   cudaMemcpy( dev_bucket_caps, bucket_caps, sizeof(int) * THREADS, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_global_splitters, global_splitters, sizeof(int) * (THREADS - 1), cudaMemcpyHostToDevice);
+
+  CALI_MARK_END(cudaMemcpy_region);
+  CALI_MARK_END(comm_large);
   CALI_MARK_END(comm);
 
   CALI_MARK_BEGIN(comp);
   CALI_MARK_BEGIN(comp_large);
 
   getBucketSize<<<blocks, threads>>>(dev_values, dev_global_splitters, dev_bucket_caps, THREADS, BLOCKS);
+
   CALI_MARK_END(comp_large);
   CALI_MARK_END(comp);
 
   CALI_MARK_BEGIN(comm);
+  CALI_MARK_BEGIN(comm_large);
+  CALI_MARK_BEGIN(cudaMemcpy_region);
+
   cudaMemcpy(bucket_caps, dev_bucket_caps, THREADS * sizeof(int), cudaMemcpyDeviceToHost);
+
+  CALI_MARK_END(cudaMemcpy_region);
+  CALI_MARK_END(comm_large);
   CALI_MARK_END(comm);
 
   // array_print(bucket_caps, THREADS);
@@ -347,19 +370,34 @@ int main(int argc, char *argv[]){
   cudaMalloc((void**) &dev_sizes, THREADS* sizeof(int));
 
   // use the offsets and size to accurately place into sorted data
+ 
   CALI_MARK_BEGIN(comm);
+  CALI_MARK_BEGIN(comm_large);
+  CALI_MARK_BEGIN(cudaMemcpy_region);
+
   cudaMemcpy(dev_starts, bucket_starts, THREADS * sizeof(int), cudaMemcpyHostToDevice);
+
+  CALI_MARK_END(cudaMemcpy_region);
+  CALI_MARK_END(comm_large);
   CALI_MARK_END(comm);
 
   // EW TODO: may need to traverse whole array per bucket
   CALI_MARK_BEGIN(comp);
   CALI_MARK_BEGIN(comp_large);
+
   distributeData<<<blocks, threads>>>(dev_values, dev_sorted, dev_global_splitters, dev_starts, dev_sizes, THREADS, BLOCKS, NUM_VALS);
+
   CALI_MARK_END(comp_large);
   CALI_MARK_END(comp);
 
   CALI_MARK_BEGIN(comm);
+  CALI_MARK_BEGIN(comm_large);
+  CALI_MARK_BEGIN(cudaMemcpy_region);
+
   cudaMemcpy( sorted_array, dev_sorted, NUM_VALS * sizeof(int), cudaMemcpyDeviceToHost);
+
+  CALI_MARK_END(cudaMemcpy_region);
+  CALI_MARK_END(comm_large);
   CALI_MARK_END(comm);
 
   // print sorted array
@@ -407,7 +445,7 @@ int main(int argc, char *argv[]){
   adiak::libraries();     // Libraries used
   adiak::cmdline();       // Command line used to launch the job
   adiak::clustername();   // Name of the cluster
-  adiak::value("Algorithm", "BitonicSort"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+  adiak::value("Algorithm", "SampleSort"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
   adiak::value("ProgrammingModel", "CUDA"); // e.g., "MPI", "CUDA", "MPIwithCUDA"
   adiak::value("Datatype", "float"); // The datatype of input elements (e.g., double, int, float)
   adiak::value("SizeOfDatatype", 4); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
