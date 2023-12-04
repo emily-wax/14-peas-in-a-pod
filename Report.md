@@ -79,10 +79,7 @@ for i from 2 to n-2 with step 2:
 11. Check if sorted
 ```
 
-MPI Calls used
-
 **Merge Sort Pseudo Code:**
-
 ```
 mergesort(tree_height, thread_id, thread_array, arr_size, global_array):
 	curr_height = 0
@@ -131,6 +128,7 @@ main:
 
 	in root thread, call correctness_check function to ensure that values_array_global is sorted
 ```
+Adapted from http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
 
 **Bitonic Sort Pseudo Code:**
 The code from our Lab 3 implementation will be used for bitonic sort.
@@ -171,14 +169,42 @@ Runtimes will be recorded using Caliper regions (separating the timings for data
 ### Status:
 
 **Bubble Sort:**
-The MPI implmentation of bubble sort is complete, I have sources for the [CUDA implementation]([url](https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu)) in a couple different ways but have not implemented it yet.
+The MPI implementation of bubble sort is complete, I have sources for the CUDA implementation in a couple different ways but have not implemented it yet. There will not be a .cali file for bubble sort at this time due to a mistake on my part (Roee Belkin), and the downtime of the Frace cluster. It is however fully functional and will be added immediately after the cluster is restored. 
+https://github.com/domkris/CUDA-Bubble-Sort/blob/master/CUDABubbleSort/kernel.cu
 
 **Sample Sort:**
+The MPI implementation of sample sort is complete. Research has been done for the CUDA version but it has not been implemented yet.
 
 **Merge Sort:**
+The MPI implementation of merge sort is complete. I have found a source to adapt for the CUDA implementation, but have not implemented it yet.
+https://github.com/kevin-albert/cuda-mergesort/blob/master/mergesort.cu
 
 **Bitonic Sort:**
-The CUDA implementaiton of bitonic sort is complete, I have found code for the [MPI implemnetation]([url](https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html)https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html) but have not implemented it yet.
+The CUDA implementation of bitonic sort is complete, I have found code for the but have not implemented it yet.
+https://people.cs.rutgers.edu/~venugopa/parallel_summer2012/mpi_bitonic.html
 
 ## Questions:
 * How important is it to generate data in parallel for CUDA? Since Lab 3 did not, we also did not for our CUDA implementation.
+
+## 4. Performance Evaluation
+### Status:
+**Bubble Sort:**
+The MPI implementation is complete and it does work. However the algorithm is terribly ineffecient, so CALI files were not produced for the top 4 biggest input sizes. While I followed a reference for implementing an odd even version of bubble sort which should work well on a parallel system I was not able to comprehend it well enough to implement it as effeciently as possible. This lead to a lot of issues with the CUDA implementation for this algorithm, so after hours of attemts I decided to focus my energy on evaluating the algorithms. CUDA is not implemented for this algorithm. 
+
+**Sample Sort:**
+The MPI implementation for sample sort is complete. The algorithm is pretty efficient but performs worse on higher threads due to its high quantity of communication. When trying to implement the CUDA version of sample sort I got it mostly working except for a small race condition. I spent hours trying to find a solution to this and reached out to the TA for help but nothing seemed to work. It got to the point where I decided to focus on the testing of my MPI implementation. I got all the .cali files except for a few random ones. CUDA is not implemented.
+
+**Merge Sort:**
+The MPI implementation of merge sort is complete and functional - Caliper files have been generated for all 70 * 4 runs. The algorithm seems to have relatively constant runtimes even as more threads are added, which is to be expected given the unavoidable sequential portions of the algorithm when merging. I also attempted to implement a CUDA version of merge sort from an online source, but the code only worked inconsistently for some small input sizes and I got stuck trying to debug this. For this reason, I chose to finish testing for the MPI implementation in order to continue making progress on the project.
+
+**Bitonic Sort:**
+The CUDA implementation is complete and all cali files are generated for all input sizes on 512 and 1024 threads over all 4 sorts. The MPI implementation proved to be difficult - I had found code online and expected those sources to be adequate to be able to analyze and compare sorting across different parallelization strategies, however these implementations did not work as expected and paired with a only a basic understanding of how the implementation in CUDA was achieved, it was hard to debug or create MPI code for bitonic sort. I decided to focus on having a good implementation and analysis of bitonic sort in CUDA before doing MPI, so MPI is not implemented. 
+
+### Call Tree:
+```<img width="452" alt="image" src="https://github.com/emily-wax/14-peas-in-a-pod/assets/91850470/5e5ec76f-e74b-4230-9ba4-a571dab738a0">
+```
+
+### Graphs:
+Graphs and performance analysis can be found in final project eval.pdf.
+
+## Questions:
