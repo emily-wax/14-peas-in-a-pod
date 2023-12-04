@@ -1,10 +1,10 @@
 /******************************************************************************
-* FILE: mergesort.cpp
-* DESCRIPTION:  
-*   Parallelized merge sort algorithm using MPI
-* AUTHOR: Harini Kumar
-* LAST REVISED: 11/05/23
-******************************************************************************/
+ * FILE: mergesort.cpp
+ * DESCRIPTION:
+ *   Parallelized merge sort algorithm using MPI
+ * AUTHOR: Harini Kumar
+ * LAST REVISED: 11/05/23
+ ******************************************************************************/
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +126,7 @@ void createData(int numThreads, int *values_array, int NUM_VALS, int sortType)
 
     if (thread_id == 0)
     {
-        printArray(values_array, NUM_VALS);
+        // printArray(values_array, NUM_VALS);
     }
 }
 
@@ -252,7 +252,9 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
             right_data = (int *)malloc(arr_size * sizeof(int));
             CALI_MARK_BEGIN("comm");
             CALI_MARK_BEGIN("comm_large");
+            CALI_MARK_BEGIN("MPI_Recv");
             MPI_Recv(right_data, arr_size, MPI_INT, right_branch, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            CALI_MARK_END("MPI_Recv");
             CALI_MARK_END("comm_large");
             CALI_MARK_END("comm");
 
@@ -277,7 +279,9 @@ void mergesort(int tree_height, int thread_id, int *thread_array, int arr_size, 
             int left_branch = thread_id - (1 << curr_height); // thread_id - 2^curr_height
             CALI_MARK_BEGIN("comm");
             CALI_MARK_BEGIN("comm_large");
+            CALI_MARK_BEGIN("MPI_Send");
             MPI_Send(left_data, arr_size, MPI_INT, left_branch, 0, MPI_COMM_WORLD); // left data currently holds the data for this branch
+            CALI_MARK_END("MPI_Send");
             CALI_MARK_END("comm_large");
             CALI_MARK_END("comm");
             delete[] left_data;        // holding data that has been sent to left branch, not needed
@@ -309,6 +313,7 @@ int main(int argc, char **argv)
     CALI_MARK_BEGIN("main");
 
     int NUM_VALS = atoi(argv[1]);
+    int input_type = atoi(argv[2]);
     int num_threads;
 
     int thread_id;
@@ -327,7 +332,7 @@ int main(int argc, char **argv)
 
     // should be done by all threads not just root, only yields one gathered global array
     CALI_MARK_BEGIN("data_init");
-    createData(num_threads, values_array_global, NUM_VALS, RANDOM);
+    createData(num_threads, values_array_global, NUM_VALS, input_type);
     CALI_MARK_END("data_init");
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -335,7 +340,9 @@ int main(int argc, char **argv)
     int *values_array_thread = (int *)malloc(block_size * sizeof(int));
     CALI_MARK_BEGIN("comm");
     CALI_MARK_BEGIN("comm_large");
+    CALI_MARK_BEGIN("MPI_Scatter");
     MPI_Scatter(values_array_global, block_size, MPI_INT, values_array_thread, block_size, MPI_INT, 0, MPI_COMM_WORLD);
+    CALI_MARK_END("MPI_Scatter");
     CALI_MARK_END("comm_large");
     CALI_MARK_END("comm");
 
@@ -352,7 +359,7 @@ int main(int argc, char **argv)
 
     if (thread_id == 0)
     {
-        printArray(values_array_global, NUM_VALS);
+        // printArray(values_array_global, NUM_VALS);
         CALI_MARK_BEGIN("correctness_check");
         cout << "Sorted?: " << is_sorted(values_array_global, NUM_VALS) << endl;
         CALI_MARK_END("correctness_check");
@@ -364,7 +371,8 @@ int main(int argc, char **argv)
     const char *datatype = "int";
     int sizeOfDatatype = sizeof(int);
     int inputSize = NUM_VALS;
-    const char *inputType = "Random";
+    // const char *inputType = "Random";
+    static const char *const inputTypes[] = {"Sorted", "ReverseSorted", "1%perturbed", "Random"};
     int num_procs = num_threads;
     const char *num_blocks = "N/A";
     int group_number = 14;
@@ -380,7 +388,7 @@ int main(int argc, char **argv)
     adiak::value("Datatype", datatype);                           // The datatype of input elements (e.g., double, int, float)
     adiak::value("SizeOfDatatype", sizeOfDatatype);               // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
     adiak::value("InputSize", inputSize);                         // The number of elements in input dataset (1000)
-    adiak::value("InputType", inputType);                         // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    adiak::value("InputType", inputTypes[input_type]);            // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", num_procs);                         // The number of processors (MPI ranks)
     adiak::value("num_threads", num_threads);                     // The number of CUDA or OpenMP threads
     adiak::value("num_blocks", num_blocks);                       // The number of CUDA blocks
