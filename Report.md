@@ -80,6 +80,8 @@ for i from 2 to n-2 with step 2:
 ```
 
 **Merge Sort Pseudo Code:**
+
+MPI:
 ```
 mergesort(tree_height, thread_id, thread_array, arr_size, global_array):
 	curr_height = 0
@@ -130,6 +132,47 @@ main:
 ```
 Adapted from http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
 
+
+CUDA:
+```
+__device__ gpu_merge(source, dest, start, middle, end)
+	// called for each slice, merges source left array starting at start and right array starting at middle
+	// results stored in dest, slice indices maintained
+
+// mergesort for the slice given to device
+__global__ gpu_mergesort(source, dest, size, width):
+	idx = threadIdx.x + blockDim.x * blockIdx.x; // calculate unique index across threads and blocks
+	start = width * idx;                         // used to index into array at start of slice
+
+	if start >= size, return
+
+	middle = start + (width / 2)
+	end = start + width
+
+	call gpu_merge with calculated start, middle, end
+
+
+mergesort(data, size):
+	cudaMalloc two arrays (d_data and d_swp) that are length size to switch between while merging
+	cudaMemcpy d_data from host to device
+	point pointers A and B at d_data and d_swp, respectively
+
+	for every width from 2 to size, width *= 2:
+		call gpu_mergesort<<<blocks, threads>>>(A, B, size, width) // the slices that the device function works on double at each stage
+		swap A and B after each gpu_mergesort call to correctly track the most updated merged version
+	
+	cudaMemcpy merged list from device back to host
+	cudaFree both A and B
+
+main:
+	take in input parameters (input size, threads, input type)
+	blocks = input size / threads
+	generate input data array of length input size
+	call mergesort
+	check if sorted
+```
+Adapted from https://github.com/kevin-albert/cuda-mergesort/blob/master/mergesort.cu
+
 **Bitonic Sort Pseudo Code:**
 The code from our Lab 3 implementation will be used for bitonic sort.
 
@@ -152,6 +195,7 @@ merge:
 - https://www.geeksforgeeks.org/odd-even-sort-brick-sort/
 - https://www.geeksforgeeks.org/odd-even-transposition-sort-brick-sort-using-pthreads/
 - http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
+- https://github.com/kevin-albert/cuda-mergesort/blob/master/mergesort.cu
 
 ## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
 - Strong scaling to more nodes (same problem size, increase number of processors)
